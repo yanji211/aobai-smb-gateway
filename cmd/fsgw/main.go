@@ -76,6 +76,8 @@ func main() {
 		os.Exit(cmdSyncToken(args))
 	case "restart":
 		os.Exit(cmdRestart(args))
+	case "takeover":
+		os.Exit(cmdTakeover(args))
 	case "selftest":
 		os.Exit(cmdSelftest(args))
 	case "passwd":
@@ -110,6 +112,8 @@ func usage() {
   fsgw ui                                   打开控制台（带 token）
   fsgw synctoken                            打印快同步地址与 token（含可直接运行的客户端命令）
   fsgw restart                              换二进制后重启
+  fsgw takeover [-config ...] [-gui]        结束已有实例，改用当前这份程序与配置重启
+                                            （双击时选「接管」会自动调用，一般不用手打）
   fsgw selftest [-v]                        跑自动化功能测试，不需要管理员
   fsgw passwd -password xxx                 生成 WebDAV 口令摘要
   fsgw clean-meta [-v] [-force]             列出/清除 mac 留下的 .DS_Store、._xxx 等影子文件
@@ -167,6 +171,7 @@ func cmdRun(args []string) int {
 	noElevate := fs.Bool("noelevate", false, "不自动提权（调试用；SMB 免密与 445 接管会失效）")
 	detach := fs.Bool("detach", false, "转到后台运行，本进程立即返回")
 	openUI := fs.Bool("open", false, "起来后自动用浏览器打开控制台")
+	gui := fs.Bool("gui", false, "检测到已有实例时弹出图形对话框（双击 exe 自动开启）")
 	daemon := fs.Bool("daemon", false, "内部标记：本进程已经是那个后台实例")
 	if err := fs.Parse(args); err != nil {
 		return 1
@@ -183,13 +188,36 @@ func cmdRun(args []string) int {
 
 	// 1) 已经在跑就别再起一个：双击几次也只会有一个实例。
 	//    判据是控制台端口能连上且 /healthz 正常，只读，不碰任何业务接口。
+	//
+	//    双击 exe 时不能只打印一行就退出——控制台窗口一闪而过，用户会以为
+	//    "程序坏了、点了没反应"。这里把现状和两个选择摆到对话框里。
 	if !*daemon && instanceUp(cfg.UI.Bind) {
-		fmt.Println("fsgw 已经在运行，没有重复启动。")
-		fmt.Println("控制台:", "http://"+ctlapi.Advertise(cfg.UI.Bind)+"/")
-		if *openUI {
-			openConsole(cfg, slog.Default())
+		console := "http://" + ctlapi.Advertise(cfg.UI.Bind) + "/"
+		allowGUI := bareStart || *gui
+		switch askConflict("熬拜共享家 · 已有服务在运行", conflictMessage(cfg, console), allowGUI) {
+		case choiceTakeOver:
+			// 结束旧实例，改用"当前这份 exe + 当前这份 config"启动。
+			// cmdTakeover 内部会申请管理员权限：旧实例多半是提权跑的。
+			return cmdTakeover(takeoverArgs(cfg.Path, *noTray, *openUI, allowGUI))
+		case choiceKeepOld:
+			fmt.Println("已保留原有服务，本次启动关闭。")
+			fmt.Println("控制台:", console, "（用原有服务的账号登录）")
+			if *openUI {
+				// 不带 token：原有服务的 control.token 不在本目录，硬塞一个
+				// 本包的 token 只会让页面报鉴权失败，不如直接给登录页。
+				if err := openBrowser(console); err != nil {
+					fmt.Println("请手动打开上面的地址")
+				}
+			}
+			return 0
+		default: // choiceSkip：CLI / 计划任务 / 非 Windows，保持原有行为
+			fmt.Println("fsgw 已经在运行，没有重复启动。")
+			fmt.Println("控制台:", console)
+			if *openUI {
+				openConsole(cfg, slog.Default())
+			}
+			return 0
 		}
-		return 0
 	}
 
 	// 2) 提权：SMB 共享、445 接管、防火墙规则都要管理员，双击 exe 默认没有。
@@ -447,6 +475,171 @@ func cliDo(cfg *config.Config, method, path string, body any) (map[string]any, e
 		return out, fmt.Errorf("%s", msg)
 	}
 	return out, nil
+}
+
+// conflictMessage 把"为什么双击没反应"讲清楚，并说明两个按钮各自的后果。
+func conflictMessage(cfg *config.Config, console string) string {
+	root := firstShareRoot(cfg)
+	dir := filepath.Dir(cfg.Path)
+	return "这台电脑上已经有一个「熬拜共享家」服务在运行：\r\n\r\n" +
+		"    控制台　　" + console + "\r\n" +
+		"    控制端口　" + cfg.UI.Bind + "\r\n" +
+		"    当前包位置　" + dir + "\r\n\r\n" +
+		"445 等共享端口同一时刻只能由一个服务持有，所以本次启动被挡住了。\r\n" +
+		"刚才双击后「没反应」，就是这个原因，不是程序坏了。\r\n\r\n" +
+		"请选择：\r\n\r\n" +
+		"【是】结束原有服务，改用当前这个包启动\r\n" +
+		"　　　共享目录会变成：" + root + "\r\n" +
+		"　　　电视等已连接的设备可能要重启才会刷新列表。\r\n\r\n" +
+		"【否】保留原有服务，关闭本次启动\r\n" +
+		"　　　什么都不改，直接访问上面的控制台即可。"
+}
+
+// firstShareRoot 取当前这份配置真正会共享的目录，别在对话框里报一个
+// 泛泛的 "share"——用户要判断的正是"换过去之后哪个目录会被共享"。
+func firstShareRoot(cfg *config.Config) string {
+	if len(cfg.Shares) > 0 && cfg.Shares[0].Root != "" {
+		return cfg.Shares[0].Root
+	}
+	return filepath.Join(filepath.Dir(cfg.Path), "share")
+}
+
+// takeoverArgs 给 cmdTakeover 的 flag.FlagSet 用（元素不会被空格拆开）。
+func takeoverArgs(cfgPath string, noTray, openUI, gui bool) []string {
+	a := make([]string, 0, 8)
+	if cfgPath != "" {
+		a = append(a, "-config", cfgPath)
+	}
+	if noTray {
+		a = append(a, "-notray")
+	}
+	if openUI {
+		a = append(a, "-open")
+	}
+	if gui {
+		a = append(a, "-gui")
+	}
+	return a
+}
+
+// takeoverParams 给 RelaunchElevated 用：ShellExecuteW 收的是一整串参数，
+// 带空格的路径必须自己加引号。与 elevateParams 是同一个约定。
+func takeoverParams(cfgPath string, noTray, openUI, gui bool) string {
+	p := "takeover"
+	if cfgPath != "" {
+		p += ` -config "` + cfgPath + `"`
+	}
+	if noTray {
+		p += " -notray"
+	}
+	if openUI {
+		p += " -open"
+	}
+	if gui {
+		p += " -gui"
+	}
+	return p
+}
+
+// cmdTakeover 结束已在跑的实例，改用"当前这份 exe + 当前这份 config"重启。
+// 由双击时的冲突对话框调用，也可以手工执行：fsgw takeover -config x.yaml
+func cmdTakeover(args []string) int {
+	fs := flag.NewFlagSet("takeover", flag.ContinueOnError)
+	cfgPath := fs.String("config", "", "配置文件路径（默认 exe 同目录 config.yaml）")
+	noTray := fs.Bool("notray", false, "不显示托盘图标")
+	openUI := fs.Bool("open", false, "启动后打开控制台")
+	gui := fs.Bool("gui", false, "用图形对话框报告结果")
+	if err := fs.Parse(args); err != nil {
+		return 1
+	}
+	cfg, err := config.Load(*cfgPath)
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+
+	// 旧实例多半是提权跑的，普通权限结束不了。先申请一次 UAC，让提权后的
+	// 同一个子命令把活干完；用户已经看过说明框，这一步只是执行决定。
+	if runtime.GOOS == "windows" && !platform.IsAdmin() {
+		if err := platform.RelaunchElevated(takeoverParams(*cfgPath, *noTray, *openUI, *gui), false); err != nil {
+			fmt.Fprintln(os.Stderr, "接管需要管理员权限，提权失败:", err)
+			showError("熬拜共享家 · 接管失败",
+				"结束原有服务需要管理员权限，UAC 没有通过：\r\n"+err.Error()+
+					"\r\n\r\n原有服务保持不变。可以右键 fsgw.exe → 以管理员身份运行后重试。", *gui)
+			return 1
+		}
+		fmt.Println("已弹出 UAC，点「是」后会自动结束原有服务并用本包启动。")
+		return 0
+	}
+	return takeoverNow(cfg, *cfgPath, *noTray, *openUI, *gui)
+}
+
+// takeoverNow 已在管理员权限下运行：拆旧实例 → 等端口 → 拉起当前包的后台实例。
+func takeoverNow(cfg *config.Config, cfgPath string, noTray, openUI, gui bool) int {
+	self, err := os.Executable()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		return 1
+	}
+	console := "http://" + ctlapi.Advertise(cfg.UI.Bind) + "/"
+	logPath := filepath.Join(cfg.Log.Dir, "fsgw.log")
+
+	// 1) 先请旧实例优雅退出，好让它把 SMB 共享、防火墙规则、DLNA、WebDAV
+	//    拆干净。control.token 通常不在本包目录，这条路失败是正常的。
+	if _, err := cliDo(cfg, http.MethodPost, "/api/quit", nil); err == nil {
+		fmt.Println("已请求原有服务退出…")
+		platform.WaitPortFree(cfg.UI.Bind, 10*time.Second)
+	}
+
+	// 2) 端口还占着就结束其它同名进程（listPIDs 会排除自己）。
+	if !platform.WaitPortFree(cfg.UI.Bind, 400*time.Millisecond) {
+		n, kerr := platform.KillOtherInstances(filepath.Base(self))
+		if kerr != nil || n == 0 {
+			msg := "无法结束原有服务"
+			if kerr != nil {
+				msg += "：" + kerr.Error()
+			} else {
+				msg += "（没有找到同名进程，请确认是否以管理员身份运行）"
+			}
+			fmt.Fprintln(os.Stderr, msg)
+			showError("熬拜共享家 · 接管失败", msg+"\r\n\r\n原有服务保持不变。", gui)
+			return 1
+		}
+		fmt.Printf("已结束 %d 个原有进程，等待端口释放…\n", n)
+		if !platform.WaitPortFree(cfg.UI.Bind, 15*time.Second) {
+			msg := "端口 " + cfg.UI.Bind + " 仍被占用。\r\n\r\n" +
+				"常见原因：开机自启任务（任务计划程序）把原有服务又拉起来了。\r\n" +
+				"请先禁用该任务，再重新双击本包启动。"
+			fmt.Fprintln(os.Stderr, msg)
+			showError("熬拜共享家 · 接管失败", msg, gui)
+			return 1
+		}
+	}
+
+	// 3) 父进程已提权，spawn 出来的后台实例继承管理员令牌，能接管 445。
+	//    -daemon 会跳过单例检测与二次提权，避免又弹一次 UAC。
+	if err := platform.SpawnDetached(self, detachArgv(cfgPath, noTray, openUI, false)...); err != nil {
+		msg := "拉起新实例失败：" + err.Error()
+		fmt.Fprintln(os.Stderr, msg)
+		showError("熬拜共享家 · 接管失败", msg, gui)
+		return 1
+	}
+
+	// 控制台 /healthz 通了就算起来；大目录索引对齐可能还要几分钟，不必等它。
+	if !waitListening(cfg.UI.Bind, 45*time.Second) {
+		fmt.Fprintln(os.Stderr, "新实例还没就绪，看日志:", logPath)
+		showInfo("熬拜共享家 · 正在启动",
+			"原有服务已结束，新实例正在建索引（大目录可能要几分钟）。\r\n\r\n"+
+				"稍后访问："+console+"\r\n日志："+logPath, gui)
+		return 0
+	}
+	msg := "原有服务已结束，已用当前文件夹这个包重新启动。\r\n\r\n" +
+		"共享目录　" + firstShareRoot(cfg) + "\r\n" +
+		"控制台　　" + console + "\r\n\r\n" +
+		"注意：电视等已连接的设备可能仍沿用旧挂载，必要时重启一下设备。"
+	fmt.Println("接管完成。控制台:", console)
+	showInfo("熬拜共享家 · 接管完成", msg, gui)
+	return 0
 }
 
 // cmdStop 优雅退出：先让在跑的实例把暴露面拆干净，再等它结束。
