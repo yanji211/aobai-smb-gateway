@@ -14,6 +14,11 @@
 >
 > 本版本已实测 `go build ./...` 与 `go test ./...` 全绿（Go 1.26）。
 >
+> **Windows 绿色版（解压即用）**：见 [portable/README.md](portable/README.md)，
+> 或从 [Releases](https://github.com/yanji211/aobai-smb-gateway/releases/latest)
+> 下载 `aobai-smb-gateway-portable-win-x64.zip`。默认账号 `admin` / `123456`、
+> 默认共享目录为解压目录下的 `share\`（**公开默认弱口令，务必在不可信网络中修改**）。
+>
 > © 2026 成都曼巴科技有限公司 · 保留所有权利
 
 本地常驻网关：局域网直读直写，外部只读走索引，SQLite 为唯一真相源。
