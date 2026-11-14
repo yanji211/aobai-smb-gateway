@@ -1,0 +1,30 @@
+# 构建与依赖
+fsgw.exe
+fsgw.exe~
+*.exe~
+.gopath/
+.gocache/
+.gocache2/
+
+# 运行时数据
+data/
+accept-report.json
+
+# 编辑器
+.vscode/
+.idea/
+
+
+# GitHub 公开版追加（由发布脚本生成）
+.svn/
+*.exe
+*.log
+*.db
+*.db-wal
+*.db-shm
+*.zip
+*.bak*
+*.token
+*.part
+*.map
+.DS_Store

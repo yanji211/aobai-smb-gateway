@@ -1,0 +1,7 @@
+# 由控制台维护的 SMB 客户端账号表。
+# 在控制台增删账号会自动重写本文件；手工改也行，改完重启 fsgw 生效。
+# 这里只有 NT 哈希（NTOWFv1）没有明文口令。生成哈希：fsgw smb nt-hash <口令>
+clients:
+    - name: example-user
+      nt_hash: 00000000000000000000000000000000  # 占位值！请用 fsgw smb nt-hash <口令> 生成后替换
+      added_at: "2026-11-05T18:20:26+08:00"

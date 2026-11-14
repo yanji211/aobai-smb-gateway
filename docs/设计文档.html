@@ -1,0 +1,1131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件共享网关 · 工程设计文档</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --card: #ffffff; --text: #1f2933; --muted: #5f6b7a;
+    --border: #e3e8ef; --accent: #2563eb; --accent-soft: #eff4ff;
+    --warn: #b45309; --warn-soft: #fff7ed;
+    --ok: #15803d; --ok-soft: #f0fdf4;
+    --code-bg: #0f172a; --code-text: #e2e8f0;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    line-height: 1.78; font-size: 15px;
+  }
+  .layout { display: flex; max-width: 1240px; margin: 0 auto; padding: 32px 20px 90px; gap: 30px; }
+  nav.toc {
+    flex: 0 0 250px; position: sticky; top: 24px; align-self: flex-start;
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 16px 14px; font-size: 13px; max-height: calc(100vh - 48px); overflow-y: auto;
+  }
+  nav.toc h3 {
+    margin: 0 0 12px; font-size: 12px; color: var(--muted);
+    letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .toc-group { margin-bottom: 14px; padding-bottom: 12px; border-bottom: 1px dashed var(--border); }
+  .toc-group:last-child { border-bottom: 0; margin-bottom: 0; padding-bottom: 0; }
+  nav.toc a {
+    display: block; color: var(--text); text-decoration: none;
+    padding: 3px 8px; border-radius: 6px; margin-bottom: 1px; line-height: 1.5;
+  }
+  nav.toc a:hover { background: var(--accent-soft); color: var(--accent); }
+  .toc-h2 { font-weight: 600; }
+  .toc-h3 { padding-left: 20px !important; color: var(--muted); font-size: 12.5px; }
+  .toc-h4 { padding-left: 34px !important; color: var(--muted); font-size: 12px; }
+
+  main { flex: 1; min-width: 0; }
+  .hero {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 30px 32px; margin-bottom: 24px;
+  }
+  .hero h1 { margin: 0 0 10px; font-size: 25px; line-height: 1.35; }
+  .hero p { margin: 0; color: var(--muted); font-size: 14px; }
+  .tag-row { margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .tag {
+    display: inline-block; background: var(--accent-soft); color: var(--accent);
+    border-radius: 999px; padding: 3px 11px; font-size: 12px; font-weight: 600;
+  }
+  .tag.warn { background: var(--warn-soft); color: var(--warn); }
+
+  section.card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 8px 32px 30px; margin-bottom: 22px;
+  }
+  h2.doc-title {
+    margin: 24px 0 18px; font-size: 21px; padding-bottom: 12px;
+    border-bottom: 2px solid var(--accent-soft); color: #0b1220;
+  }
+  h3 { margin: 30px 0 10px; font-size: 17px; color: #0b1220; padding-left: 11px; border-left: 4px solid var(--accent); }
+  h2:not(.doc-title) {
+    margin: 38px 0 14px; font-size: 19px; color: #0b1220;
+    padding-bottom: 8px; border-bottom: 1px solid var(--border);
+  }
+  h4 { margin: 22px 0 8px; font-size: 15px; color: var(--accent); }
+  p { margin: 11px 0; }
+  ul, ol { margin: 11px 0; padding-left: 24px; }
+  li { margin: 5px 0; }
+  ul.nested { margin: 4px 0; }
+  strong { color: #0b1220; }
+  a { color: var(--accent); text-decoration: none; border-bottom: 1px solid #cddffd; }
+  a:hover { border-bottom-color: var(--accent); }
+  code.inline {
+    background: #eef1f6; border-radius: 4px; padding: 1px 5px; font-size: 13px;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    color: #b3306b; word-break: break-all;
+  }
+  pre.code {
+    background: var(--code-bg); color: var(--code-text); border-radius: 10px;
+    padding: 16px 18px; overflow-x: auto; font-size: 12.8px; line-height: 1.62;
+    font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+    margin: 14px 0;
+  }
+  pre.code code { white-space: pre; }
+  .table-wrap { overflow-x: auto; margin: 14px 0; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.8px; min-width: 520px; }
+  th, td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; vertical-align: top; line-height: 1.6; }
+  th { background: #f3f6fb; font-weight: 600; white-space: nowrap; }
+  tr:nth-child(even) td { background: #fafbfd; }
+  .callout {
+    border-radius: 10px; padding: 13px 16px; margin: 14px 0; font-size: 14px;
+    border: 1px solid transparent; line-height: 1.7;
+  }
+  .callout.info { background: var(--accent-soft); border-color: #d6e2ff; }
+  .callout.warn { background: var(--warn-soft); border-color: #fed7aa; }
+  .callout.ok { background: var(--ok-soft); border-color: #bbf7d0; }
+  hr.rule { border: 0; border-top: 1px solid var(--border); margin: 26px 0; }
+  footer.doc-foot { text-align: center; color: var(--muted); font-size: 12px; padding: 12px 0 0; }
+  @media (max-width: 900px) {
+    .layout { flex-direction: column; padding: 16px 12px 60px; }
+    nav.toc { position: static; max-height: none; }
+    section.card { padding: 8px 18px 22px; }
+    .hero { padding: 22px 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<nav class="toc">
+  <h3>目录</h3>
+  <div class="toc-group"><a class="toc-h2" href="#doc-01">01 技术设计说明</a>
+<a class="toc-h2" href="#sec-1">1. 文档定位</a>
+<a class="toc-h2" href="#sec-2">2. 目标与非目标</a>
+<a class="toc-h3" href="#sec-3">2.1 第一版目标</a>
+<a class="toc-h3" href="#sec-4">2.2 非目标</a>
+<a class="toc-h2" href="#sec-5">3. 架构总览</a>
+<a class="toc-h2" href="#sec-6">4. 进程与生命周期</a>
+<a class="toc-h2" href="#sec-7">5. 开关状态机</a>
+<a class="toc-h3" href="#sec-8">5.1 状态定义</a>
+<a class="toc-h3" href="#sec-9">5.2 转换顺序（不可调换）</a>
+<a class="toc-h3" href="#sec-10">5.3 崩溃恢复</a>
+<a class="toc-h2" href="#sec-11">6. 平台抽象层</a>
+<a class="toc-h3" href="#sec-12">6.1 fileid</a>
+<a class="toc-h3" href="#sec-13">6.2 watcher</a>
+<a class="toc-h3" href="#sec-14">6.3 firewall</a>
+<a class="toc-h3" href="#sec-15">6.4 link</a>
+<a class="toc-h2" href="#sec-16">7. 索引与监听</a>
+<a class="toc-h3" href="#sec-17">7.1 事件分类</a>
+<a class="toc-h3" href="#sec-18">7.2 防抖与合并</a>
+<a class="toc-h3" href="#sec-19">7.3 溢出与漏事件</a>
+<a class="toc-h3" href="#sec-20">7.4 写入顺序</a>
+<a class="toc-h2" href="#sec-21">8. VFS 与路径</a>
+<a class="toc-h2" href="#sec-22">9. 局域网面</a>
+<a class="toc-h3" href="#sec-23">9.1 SMB：托管系统共享</a>
+<a class="toc-h3" href="#sec-24">9.2 写路径的能力边界</a>
+<a class="toc-h3" href="#sec-25">9.3 DLNA</a>
+<a class="toc-h2" href="#sec-26">10. 外部只读面</a>
+<a class="toc-h3" href="#sec-27">10.1 WebDAV</a>
+<a class="toc-h3" href="#sec-28">10.2 目录列举的性能账</a>
+<a class="toc-h2" href="#sec-29">11. 控制台：前端 HTML，后端 Go</a>
+<a class="toc-h3" href="#sec-30">11.1 形态</a>
+<a class="toc-h3" href="#sec-31">11.2 界面结构</a>
+<a class="toc-h3" href="#sec-32">11.3 API 一览</a>
+<a class="toc-h3" href="#sec-33">11.4 本地网页的真实威胁：CSRF 与 DNS rebinding</a>
+<a class="toc-h3" href="#sec-34">11.5 长任务与状态推送</a>
+<a class="toc-h3" href="#sec-35">11.6 前端拿不到本地路径，所以需要目录浏览接口</a>
+<a class="toc-h3" href="#sec-36">11.7 危险操作的产品层保护</a>
+<a class="toc-h2" href="#sec-37">12. 版本与快照</a>
+<a class="toc-h2" href="#sec-38">13. 安全模型</a>
+<a class="toc-h2" href="#sec-39">14. 配置模型</a>
+<a class="toc-h2" href="#sec-40">15. 可观测性</a>
+<a class="toc-h2" href="#sec-41">16. 包职责与依赖方向</a>
+<a class="toc-h2" href="#sec-42">17. 外部依赖</a></div>
+<div class="toc-group"><a class="toc-h2" href="#doc-02">02 数据模型与事务</a>
+<a class="toc-h2" href="#sec-43">1. 表结构与职责</a>
+<a class="toc-h2" href="#sec-44">2. 完整 DDL</a>
+<a class="toc-h2" href="#sec-45">3. 索引清单与查询对照</a>
+<a class="toc-h2" href="#sec-46">4. 单写队列</a>
+<a class="toc-h2" href="#sec-47">5. 事务顺序</a>
+<a class="toc-h3" href="#sec-48">5.1 监听驱动的变更（SMB 与本机修改都走这条）</a>
+<a class="toc-h3" href="#sec-49">5.2 网关驱动的变更（WebDAV 写、快照清理、reconcile 补录）</a>
+<a class="toc-h3" href="#sec-50">5.3 移动事务（重点）</a>
+<a class="toc-h2" href="#sec-51">6. 内容快照：能力分级（重要）</a>
+<a class="toc-h3" href="#sec-52">6.1 为什么硬链接方案不成立</a>
+<a class="toc-h3" href="#sec-53">6.2 分级承诺</a>
+<a class="toc-h3" href="#sec-54">6.3 存储布局</a>
+<a class="toc-h3" href="#sec-55">6.4 清理器</a>
+<a class="toc-h2" href="#sec-56">7. 事件配对与超时定性</a>
+<a class="toc-h2" href="#sec-57">8. 一致性自愈</a>
+<a class="toc-h2" href="#sec-58">9. 迁移与版本</a>
+<a class="toc-h2" href="#sec-59">10. 容量估算</a></div>
+<div class="toc-group"><a class="toc-h2" href="#doc-03">03 任务拆解与验收</a>
+<a class="toc-h2" href="#sec-60">里程碑视图</a>
+<a class="toc-h2" href="#sec-61">M0 工程地基</a>
+<a class="toc-h2" href="#sec-62">M1 索引内核</a>
+<a class="toc-h2" href="#sec-63">M2 移动语义与版本</a>
+<a class="toc-h2" href="#sec-64">M3 局域网面</a>
+<a class="toc-h2" href="#sec-65">M3c 控制台（前端 HTML + 后端 Go）</a>
+<a class="toc-h2" href="#sec-66">M4a 外部只读面</a>
+<a class="toc-h2" href="#sec-67">M4b 快照</a>
+<a class="toc-h2" href="#sec-68">M5 加固与验收</a>
+<a class="toc-h2" href="#sec-69">完成定义（DoD）</a>
+<a class="toc-h2" href="#sec-70">建议的推进顺序（含并行）</a></div>
+<div class="toc-group"><a class="toc-h2" href="#doc-04">04 决策点与风险登记</a>
+<a class="toc-h2" href="#sec-71">D-01 SMB 实现路线：托管系统共享，还是自研协议栈</a>
+<a class="toc-h3" href="#sec-72">事实前提</a>
+<a class="toc-h3" href="#sec-73">备选</a>
+<a class="toc-h3" href="#sec-74">推荐</a>
+<a class="toc-h3" href="#sec-75">不决策的后果</a>
+<a class="toc-h2" href="#sec-76">D-02 内容快照的承诺边界</a>
+<a class="toc-h3" href="#sec-77">事实前提</a>
+<a class="toc-h3" href="#sec-78">备选</a>
+<a class="toc-h3" href="#sec-79">推荐</a>
+<a class="toc-h3" href="#sec-80">不决策的后果</a>
+<a class="toc-h2" href="#sec-81">D-03 匿名 SMB 在 Windows 上的真实可行性</a>
+<a class="toc-h3" href="#sec-82">事实前提</a>
+<a class="toc-h3" href="#sec-83">推荐</a>
+<a class="toc-h3" href="#sec-84">不决策的后果</a>
+<a class="toc-h2" href="#sec-85">D-04 整个共享可读写的删除风险</a>
+<a class="toc-h3" href="#sec-86">事实前提</a>
+<a class="toc-h3" href="#sec-87">可选缓解（不影响已定策略）</a>
+<a class="toc-h3" href="#sec-88">推荐</a>
+<a class="toc-h2" href="#sec-89">D-05 跨卷移动的定性</a>
+<a class="toc-h3" href="#sec-90">推荐</a>
+<a class="toc-h2" href="#sec-91">D-06 外部面的暴露方式</a>
+<a class="toc-h3" href="#sec-92">备选</a>
+<a class="toc-h3" href="#sec-93">推荐</a>
+<a class="toc-h2" href="#sec-94">D-07 &quot;无缓存层&quot;的性能风险</a>
+<a class="toc-h3" href="#sec-95">缓解</a>
+<a class="toc-h3" href="#sec-96">定性</a>
+<a class="toc-h2" href="#sec-97">D-08 DLNA 库选型</a>
+<a class="toc-h2" href="#sec-98">D-09 权限模型：服务以 LocalSystem 运行</a>
+<a class="toc-h3" href="#sec-99">缓解</a>
+<a class="toc-h3" href="#sec-100">推荐</a>
+<a class="toc-h2" href="#sec-101">D-10 控制台形态：HTML 前端 + Go 后端</a>
+<a class="toc-h3" href="#sec-102">已定</a>
+<a class="toc-h3" href="#sec-103">这条约束带来的三个具体决策</a>
+<a class="toc-h3" href="#sec-104">必须一起定下的安全边界</a>
+<a class="toc-h3" href="#sec-105">不做的事</a>
+<a class="toc-h2" href="#sec-106">风险登记表</a>
+<a class="toc-h2" href="#sec-107">需要在评审会上拍板的四件事</a></div>
+</nav>
+
+<main>
+  <div class="hero">
+    <h1>文件共享网关 · 工程设计文档</h1>
+    <p>局域网直读直写，外部只读走索引，SQLite 为唯一真相源。共享根 D:\share，Windows 优先落地。</p>
+    <div class="tag-row">
+      <span class="tag">Go 1.22+ · CGO 关闭</span>
+      <span class="tag">SQLite WAL · 单写队列</span>
+      <span class="tag">移动零版本</span>
+      <span class="tag">关闭即零暴露</span>
+      <span class="tag warn">SMB 路线待拍板（D-01）</span>
+      <span class="tag warn">快照承诺待拍板（D-02）</span>
+    </div>
+  </div>
+<section class="card"><h2 class="doc-title" id="doc-01">01 技术设计说明</h2>
+<h2 id="sec-1">1. 文档定位</h2>
+<p>本文把策略讨论稿翻译成可编码的工程设计。策略层的共识（局域网直读直写、外部只读、SQLite 唯一真相源、移动零版本、开关即安全）全部继承，不再重复论证；本文只回答&quot;具体怎么实现&quot;以及&quot;哪些地方做不到&quot;。</p>
+<p>三处工程调整及其理由收敛在 <code class="inline">04-决策点与风险登记.md</code>，本文在涉及处标注决策编号，例如 <code class="inline">[D-02]</code>。</p>
+<h2 id="sec-2">2. 目标与非目标</h2>
+<h3 id="sec-3">2.1 第一版目标</h3>
+<ul><li>局域网内电视、手机、PC 免装 App 访问 <code class="inline">D:\share</code>，可读可写</li><li>外部（公网或隧道）只读浏览与下载，含历史版本</li><li>文件整理（移动、重命名、建目录）不产生版本链增长</li><li>网关关闭后本机不残留任何监听端口与防火墙放行规则</li><li>索引与磁盘不一致时可自愈，且自愈过程不扫全盘</li><li>提供本机网页控制台（HTML 前端 + Go 后端）：开关、共享目录、索引统计、诊断与审计在一个页面上闭环</li></ul>
+<h3 id="sec-4">2.2 非目标</h3>
+<ul><li>不做多用户、角色、ACL 体系。外部面一个共享口令，局域网面匿名或单账户</li><li>不做块级快照、不做全量备份、不做 Git 式分支</li><li>不做跨平台一致的 SMB 协议栈自研（见 D-01）</li><li>不做云端同步、不做去重存储引擎</li><li>不做远程管理界面。控制台只绑回环，不提供&quot;从手机管理网关&quot;的能力</li><li>不做移动端 App、不做托盘常驻 UI（控制台就是唯一图形界面，浏览器即宿主）</li><li>不接管系统盘与用户主目录，共享根只能是显式配置的目录白名单</li></ul>
+<h2 id="sec-5">3. 架构总览</h2>
+<pre class="code" data-lang=""><code>                    ┌──────────────────────────────────────────────┐
+                    │              fsgw 单进程（LocalSystem）       │
+                    │                                              │
+  电视 / 手机 ──SMB──▶  smbhost  ─┐                                │
+  电视 ────────DLNA─▶  dlna     ─┤                                │
+                    │            ├──▶ vfs ──▶ index(单写队列) ──▶ SQLite(WAL)
+  外部 ───────WebDAV─▶ webdav  ─┘        │                        │
+                    │                   ▼                        │
+                    │              D:\share (字节仓库)             │
+                    │                   │                        │
+                    │   watcher ────────┘                        │
+                    │      │                                     │
+                    │      └──▶ 事件分类 → 索引更新 / 移动配对 / 快照捕获
+                    │                                              │
+                    │   ctlapi (127.0.0.1:8444) ──▶ 开关状态机      │
+                    │      ▲            │            │            │
+                    │      │        webui(embed)   firewall       │
+                    └──────┼───────────────────────────────────────┘
+                           │
+              浏览器控制台 ──┘   （fsgw CLI 走同一 API）</code></pre>
+<p>关键不变量：</p>
+<ol><li><strong>数据库是唯一真相源</strong>。目录列举、<code class="inline">Stat</code>、路径解析一律查库，不 <code class="inline">os.Stat</code>。</li><li><strong>磁盘只提供字节</strong>。读取失败如实报错，不反向修正数据库。</li><li><strong>写路径要么入库要么不可见</strong>。结构性变更走事务，提交后才对外生效。</li><li><strong>SMB 来源与网关来源互斥</strong>。网关自己经手的写操作同步更新库，并抑制对应 fsnotify 事件，避免重复记账。</li></ol>
+<h2 id="sec-6">4. 进程与生命周期</h2>
+<p>单进程，无外部依赖（SQLite 嵌入、纯 Go 驱动、CGO 关闭）。</p>
+<p>运行形态：</p>
+<div class="table-wrap"><table><thead><tr><th>形态</th><th>用途</th><th>权限</th></tr></thead><tbody><tr><td><code class="inline">fsgw run</code></td><td>前台 console，开发调试与验收用</td><td>需管理员（绑定 445、增删防火墙规则）</td></tr><tr><td><code class="inline">fsgw service install/start/stop</code></td><td>注册为 Windows 服务（<code class="inline">x/sys/windows/svc</code>），开机自启</td><td>LocalSystem</td></tr><tr><td><code class="inline">fsgw on / off / status</code></td><td>控制面客户端，向运行中的进程投递指令</td><td>普通用户（走回环 HTTP API + token，见第 11 节）</td></tr><tr><td><code class="inline">fsgw ui</code></td><td>生成带 token 的地址并打开默认浏览器</td><td>普通用户</td></tr></tbody></table></div>
+<p>启动序列：</p>
+<pre class="code" data-lang=""><code>读配置 → 校验（路径存在、可写、非系统目录）→ 打开 SQLite → 迁移
+  → 加载共享白名单 → 加载 desired_state（默认 OFF）
+  → 若 desired_state != OFF：按状态机执行开启（失败则回落到 OFF 并告警）
+  → 启动 watcher（ON/OFF 都跑，索引需要持续维护）
+  → 启动 ctlapi（127.0.0.1:8444，内嵌 webui 静态资源）</code></pre>
+<p>注意：<strong>索引维护与开关解耦</strong>。开关只影响&quot;对外暴露的协议面&quot;，索引始终运行；否则每次开启都要重扫。</p>
+<h2 id="sec-7">5. 开关状态机</h2>
+<h3 id="sec-8">5.1 状态定义</h3>
+<div class="table-wrap"><table><thead><tr><th>状态</th><th>SMB 445</th><th>DLNA (1900/8200)</th><th>WebDAV</th><th>防火墙规则</th></tr></thead><tbody><tr><td><code class="inline">OFF</code></td><td>停</td><td>停</td><td>停</td><td>全部移除</td></tr><tr><td><code class="inline">LAN</code></td><td>开</td><td>开</td><td>停</td><td>SMB + DLNA</td></tr><tr><td><code class="inline">WAN</code></td><td>停</td><td>停</td><td>开</td><td>WebDAV</td></tr><tr><td><code class="inline">ALL</code></td><td>开</td><td>开</td><td>开</td><td>全部</td></tr></tbody></table></div>
+<h3 id="sec-9">5.2 转换顺序（不可调换）</h3>
+<p>开启方向，从外到内以避免&quot;端口开了但服务没起&quot;的窗口：</p>
+<ol><li>校验目标状态的前置条件（共享根可读、端口未被占用、证书存在）</li><li>创建防火墙规则（幂等：先删同名再建）</li><li>启动对应 listener，等待就绪探针</li><li>自检：本机连一次自己的端口，失败则回滚</li><li>持久化 <code class="inline">desired_state</code>，写审计</li></ol>
+<p>关闭方向，从内到外：</p>
+<ol><li>停止 listener（等待在途连接最多 5s，超时强制）</li><li>移除防火墙规则</li><li>持久化 <code class="inline">desired_state=OFF</code>，写审计</li></ol>
+<p>任一步失败：执行反向清理，最终状态回落到 <code class="inline">OFF</code>，并把失败阶段写进 <code class="inline">state.json.last_error</code>，控制面 <code class="inline">status</code> 直接展示。<strong>不允许停在中间态。</strong></p>
+<h3 id="sec-10">5.3 崩溃恢复</h3>
+<p><code class="inline">state.json</code> 记录 <code class="inline">desired_state</code> 与实际 <code class="inline">applied_state</code>。进程启动时若二者不一致，一律按 <code class="inline">OFF</code> 启动并告警，不猜测用户意图。这样即使上次是异常退出，也不会有端口残留。</p>
+<h2 id="sec-11">6. 平台抽象层</h2>
+<p>四个接口，Windows 实现优先落地，Linux 只留空实现（编译可通过、运行返回 <code class="inline">ErrNotImplemented</code>）。</p>
+<h3 id="sec-12">6.1 fileid</h3>
+<pre class="code" data-lang="go"><code>type FileID struct {
+    VolumeSerial uint32
+    ID           [16]byte // FILE_ID_INFO 的 128 位；退化路径时高 8 字节为 0
+}
+
+type Provider interface {
+    Of(path string) (FileID, error)
+}</code></pre>
+<p>Windows 实现要点：</p>
+<ul><li><code class="inline">CreateFileW</code> 打开句柄，目录必须带 <code class="inline">FILE_FLAG_BACKUP_SEMANTICS</code>，文件带 <code class="inline">FILE_FLAG_OPEN_REPARSE_POINT</code> 防止跟随符号链接与目录联接</li><li>优先 <code class="inline">GetFileInformationByHandleEx(FileIdInfo)</code> 取 128 位 ID 与卷序列号</li><li>不支持时退化为 <code class="inline">GetFileInformationByHandle</code> 的 <code class="inline">nFileIndexHigh/Low</code>（64 位），此时高 8 字节补零，并在 <code class="inline">objects.native_file_id</code> 里用 <code class="inline">v1:</code> 前缀区分，避免与 128 位 ID 冲突</li><li>句柄必须在取完 ID 后立即 <code class="inline">CloseHandle</code>，监听热路径上这是主要开销，量级约数十微秒，可接受</li></ul>
+<h3 id="sec-13">6.2 watcher</h3>
+<pre class="code" data-lang="go"><code>type Op int // Create | Write | Rename | Remove
+
+type Event struct {
+    Op      Op
+    Path    string // 绝对 Windows 路径（长路径已加 \\?\ 前缀）
+    OldPath string // 仅 Rename 有效
+    IsDir   bool
+}
+
+type Watcher interface {
+    Add(root string) error
+    Events() &lt;-chan Event
+    Overflow() &lt;-chan string // 缓冲溢出，携带需要范围重建的子树根
+    Close() error
+}</code></pre>
+<p>Windows 实现要点（不依赖第三方递归封装，直接调 <code class="inline">ReadDirectoryChangesW</code>）：</p>
+<ul><li><code class="inline">bWatchSubtree=TRUE</code>，<code class="inline">FILE_NOTIFY_CHANGE_FILE_NAME | DIR_NAME | SIZE | LAST_WRITE | CREATION</code></li><li>缓冲区 64 KiB，单缓冲轮转；溢出返回 <code class="inline">ERROR_NOTIFY_ENUM_DIR</code> 时向 <code class="inline">Overflow()</code> 投递该子树根</li><li>重命名天然成对：<code class="inline">FILE_ACTION_RENAMED_OLD_NAME</code> 紧跟 <code class="inline">FILE_ACTION_RENAMED_NEW_NAME</code>，无需像 inotify 那样靠 cookie 配对，但仍要处理&quot;只收到一半&quot;的情况（见 <code class="inline">02</code> 的 pending_moves）</li><li>事件只给路径不给 ID，因此每个事件都要开一次句柄取 <code class="inline">FileID</code>。删除事件无法取 ID，只能用路径匹配库中记录</li></ul>
+<h3 id="sec-14">6.3 firewall</h3>
+<pre class="code" data-lang="go"><code>type Rule struct {
+    Name    string // 统一前缀 FSGW-
+    Dir     string // in
+    Action  string // allow
+    Proto   string // tcp | udp
+    LocalPort  int
+    RemoteIP   string // localsubnet | any
+    Profile    string // private | domain,private
+}
+
+type Firewall interface {
+    Ensure(rules []Rule) error
+    RemoveByPrefix(prefix string) error
+    List(prefix string) ([]Rule, error)
+}</code></pre>
+<p>实现走 <code class="inline">netsh advfirewall firewall</code>，理由：命令可审计、可回滚、失败信息明确，比 COM 的 <code class="inline">INetFwPolicy2</code> 更容易定位问题。每条规则的创建形式为 <code class="inline">delete rule name=X</code> 后 <code class="inline">add rule</code>，保证幂等。</p>
+<h3 id="sec-15">6.4 link</h3>
+<pre class="code" data-lang="go"><code>type Linker interface {
+    Hardlink(oldPath, newPath string) error // 同卷：CreateHardLinkW
+    Copy(src, dst string) error             // 跨卷退化
+    SameVolume(a, b string) (bool, error)
+}</code></pre>
+<h2 id="sec-16">7. 索引与监听</h2>
+<h3 id="sec-17">7.1 事件分类</h3>
+<p>事件进入后先做归属判断，再分流。这一步决定了后面所有语义是否正确。</p>
+<div class="table-wrap"><table><thead><tr><th>事件来源</th><th>判定方式</th><th>处理</th></tr></thead><tbody><tr><td>网关自身（WebDAV 写、快照、清理）</td><td>写入前在 <code class="inline">suppress</code> 表登记 <code class="inline">(路径, 期望 mtime/size)</code></td><td>直接丢弃，不做任何记账</td></tr><tr><td>SMB 客户端写入</td><td>路径在 SMB 共享白名单内且未登记 suppress</td><td>归为 <code class="inline">source=smb</code>，走 best-effort 快照</td></tr><tr><td>本机应用直接修改</td><td>其余</td><td>归为 <code class="inline">source=local</code>，只保证索引版本链</td></tr></tbody></table></div>
+<p><code class="inline">suppress</code> 表的键包含期望的 mtime 与 size：只有实际事件与预期一致才丢弃，避免把&quot;网关写完但用户同时也在改&quot;的情况误吞。</p>
+<h3 id="sec-18">7.2 防抖与合并</h3>
+<ul><li>结构性变更（Create / Rename / Remove）：100–200ms 窗口，保证移动配对完整</li><li>内容变更（Write）：300–500ms 窗口，同一文件窗口内多个 Write 合并为一次版本追加</li><li>大文件写入会产生持续 Write 事件流。策略：当同一 <code class="inline">FileID</code> 的 Write 事件间隔小于 500ms 时持续续期，直到静默满窗口才落一次版本；期间状态为 <code class="inline">writing</code>，<code class="inline">ReadDir</code> 可见但标记为&quot;写入中&quot;</li></ul>
+<h3 id="sec-19">7.3 溢出与漏事件</h3>
+<p>溢出不等于需要全盘扫描。处理方式：</p>
+<ol><li>从 <code class="inline">Overflow()</code> 拿到子树根</li><li>对该子树做<strong>一次范围重建</strong>：<code class="inline">ReadDir</code> 递归遍历（限制最大深度与节点数，超限则跳过并告警）</li><li>与库中该子树的记录做差集，补插、改删，全部在一个事务内完成</li><li>记录 <code class="inline">reconcile</code> 审计事件，含耗时与节点数</li></ol>
+<p>另外提供低频校验任务（默认每 6 小时，仅对最近 24 小时内变更过的 <code class="inline">object</code> 抽查存在性），兜住监听启动前与半途漏掉的事件。</p>
+<h3 id="sec-20">7.4 写入顺序</h3>
+<p>见 <code class="inline">02-数据模型与事务.md</code> 第 4 节。这里只强调一条：<strong>先库后可见</strong>。结构性变更事务提交前，新路径不出现在任何 <code class="inline">ReadDir</code> 结果里。</p>
+<h2 id="sec-21">8. VFS 与路径</h2>
+<p>VFS 是三个协议面的公共下层，负责三件事：路径规范化、白名单校验、穿越防护。</p>
+<p>规范化规则：</p>
+<ul><li>输入一律转绝对路径，扩展为 <code class="inline">\\?\</code> 长路径形式（超过 240 字符必须）</li><li>统一分隔符为 <code class="inline">\</code> 落盘、<code class="inline">/</code> 入库存 <code class="inline">path_key</code></li><li>Windows 大小写不敏感：<code class="inline">path_key = lower(path)</code>；显示名保留原始大小写。配置项 <code class="inline">case_sensitive</code> 默认为 <code class="inline">false</code></li><li>拒绝并记录以下输入：含 <code class="inline">..</code> 段、含 ADS 冒号（<code class="inline">file.txt:stream</code>）、含设备名（<code class="inline">CON</code>、<code class="inline">NUL</code>、<code class="inline">COM1</code> 等）、末尾带空格或点、路径长度超限</li><li>解析软链接与目录联接：解析后的真实路径必须仍在共享根内，否则拒绝</li></ul>
+<p>白名单校验走 <code class="inline">share_dirs</code> 表：一次查库判定 <code class="inline">(share_id, rel_path)</code> 的最长前缀，命中才放行。可写性继承：子目录默认继承父级，允许显式覆盖为只读。</p>
+<h2 id="sec-22">9. 局域网面</h2>
+<h3 id="sec-23">9.1 SMB：托管系统共享</h3>
+<p><strong>第一版不自研 SMB 协议栈</strong>（理由见 D-01）。做法是由网关托管 Windows 原生 SMB 共享：</p>
+<ul><li>用 <code class="inline">net share share /path=D:\share /grant:...</code> 或 <code class="inline">New-SmbShare</code> 创建/更新共享，名称固定为 <code class="inline">share</code></li><li>只启用 SMB2/3：<code class="inline">Set-SmbServerConfiguration -EnableSMB1Protocol $false</code></li><li>匿名访问需要三项同时成立，缺一不可：</li><ul class='nested'><li>服务端：<code class="inline">EnableSMB2Protocol $true</code>（默认）、Guest 账户启用、<code class="inline">New-SmbShare -FullAccess Guest</code></li><li>服务端策略：<code class="inline">RestrictNullSessAccess</code> 与 <code class="inline">NullSessionShares</code> 需把共享名加入</li><li>客户端：Windows 10 1903+ 默认 <code class="inline">AllowInsecureGuestAuth=0</code>，必须改注册表才允许匿名 SMB2</li></ul><li>因此提供两种模式，配置项 <code class="inline">smb.auth</code>：</li></ul>
+<div class="table-wrap"><table><thead><tr><th>模式</th><th>适用</th><th>代价</th></tr></thead><tbody><tr><td><code class="inline">guest</code></td><td>安卓电视、小米电视原生播放器</td><td>部分 Windows 与 iOS 客户端连不上，需客户端改注册表</td></tr><tr><td><code class="inline">account</code></td><td>iOS「文件」App、Windows 资源管理器</td><td>建专用低权本地账户 <code class="inline">fsgw</code>，首次连接输一次口令</td></tr><tr><td><code class="inline">both</code></td><td>默认推荐</td><td>两条路并存，电视走匿名，手机走账户</td></tr></tbody></table></div>
+<p>账户模式的硬约束：Windows 默认策略禁止空密码账户远程登录（<code class="inline">LimitBlankPasswordUse=1</code>），所以口令不能为空，必须是真实密码。</p>
+<h3 id="sec-24">9.2 写路径的能力边界</h3>
+<p>托管系统共享意味着<strong>网关不在写入路径上</strong>，这是 D-01 的直接代价。后果：</p>
+<ul><li>无法在覆盖前硬链接旧内容，内容快照降级为 best-effort（见 <code class="inline">02</code> 第 6 节）</li><li>写事件由 <code class="inline">ReadDirectoryChangesW</code> 事后送达，索引版本链不受影响（仍然准确），只有内容快照的承诺打折</li><li>想恢复&quot;写前捕获&quot;，只有三条路：自研协议栈、写内核 minifilter、定时 VSS 快照，见 D-02</li></ul>
+<h3 id="sec-25">9.3 DLNA</h3>
+<ul><li>纯 Go DMS，指向 <code class="inline">media=true</code> 的白名单目录，只做发现与播放，不暴露文件管理</li><li>SSDP 多播用 <code class="inline">239.255.255.250:1900</code>，HTTP 服务用可配置高端口（默认 8200），避免与 SMB 抢权限</li><li>媒体类型白名单：视频、音频、图片；不索引文档与压缩包</li><li>小米电视自带播放器可零安装发现；同时保留 SMB 路径作为兼容退路（部分电视 DLNA 只认 MP4）</li></ul>
+<h2 id="sec-26">10. 外部只读面</h2>
+<h3 id="sec-27">10.1 WebDAV</h3>
+<ul><li>基于 <code class="inline">golang.org/x/net/webdav</code>，包装一层方法白名单 handler：只放行 <code class="inline">GET</code>、<code class="inline">HEAD</code>、<code class="inline">PROPFIND</code>、<code class="inline">OPTIONS</code>；其余（<code class="inline">PUT</code>/<code class="inline">DELETE</code>/<code class="inline">MKCOL</code>/<code class="inline">MOVE</code>/<code class="inline">COPY</code>/<code class="inline">PROPPATCH</code>/<code class="inline">LOCK</code>）返回 <code class="inline">405</code> 并记审计</li><li><code class="inline">PROPFIND</code> 走 index 查库返回属性，不触碰磁盘</li><li><code class="inline">GET</code> 先查库确认存在与大小，再回源读字节流；支持 <code class="inline">Range</code>，支持 <code class="inline">ETag</code>（用 <code class="inline">content_hash</code>，未算哈希时用 <code class="inline">mtime-size</code> 合成）</li><li>路径映射：当前视图 <code class="inline">/share/...</code>，历史视图 <code class="inline">/versions/...</code>，两者都只读</li><li>认证：HTTP Basic，口令 bcrypt 存配置；单口令全局生效，可选 per-share 口令</li><li>默认绑定 <code class="inline">127.0.0.1:8443</code>，公网暴露靠反向代理或隧道（Cloudflare Tunnel / Tailscale / frp）。<strong>设计上不提供&quot;直接监听 0.0.0.0:443&quot;的一键选项</strong></li></ul>
+<h3 id="sec-28">10.2 目录列举的性能账</h3>
+<p><code class="inline">ReadDir</code> 直查 SQLite 不设内存缓存，这是讨论稿的明确选择。代价与缓解：</p>
+<ul><li>单目录 1 万文件：<code class="inline">SELECT ... WHERE parent_path=? ORDER BY name_key</code> 走 <code class="inline">(parent_path, name_key)</code> 复合索引，配合覆盖索引可到毫秒级</li><li>电视 SMB 客户端会频繁列举同一目录。缓解：协议层允许短暂的&quot;同一路径 500ms 内重复列举&quot;复用结果，但<strong>这是协议层的短生命周期快照，不是索引缓存</strong>，不引入失效问题</li></ul>
+<h2 id="sec-29">11. 控制台：前端 HTML，后端 Go</h2>
+<h3 id="sec-30">11.1 形态</h3>
+<p>控制台是网关的用户交互面，与三个协议面并列，但边界更严格：<strong>只在本机回环上运行，永不暴露给局域网或公网</strong>。</p>
+<div class="table-wrap"><table><thead><tr><th>层</th><th>选型</th><th>约束</th></tr></thead><tbody><tr><td>前端</td><td>原生 HTML + CSS + 原生 JS，单页</td><td>无 npm、无构建步骤、无 CDN 依赖（断网可用），<code class="inline">embed.FS</code> 打进二进制</td></tr><tr><td>通信</td><td><code class="inline">fetch</code> + <code class="inline">EventSource</code>（SSE）</td><td>变更一律 POST + 自定义头，不用 GET 改状态</td></tr><tr><td>后端</td><td>Go 标准库 <code class="inline">net/http</code> + Go 1.22 的 method-aware <code class="inline">ServeMux</code></td><td>零第三方框架</td></tr><tr><td>监听</td><td><code class="inline">127.0.0.1:8444</code></td><td>与 WebDAV 的 8443 用<strong>两套独立 mux 与中间件</strong>，不共用路由</td></tr></tbody></table></div>
+<p>不用 Electron / WebView2 的理由：它引入第二套运行时、升级链路和签名问题，而控制台需要的全部能力浏览器都有。代价是没有系统级文件选择框，靠 11.6 的目录浏览接口补上。</p>
+<p>CLI 与 UI 共用同一个 HTTP API，不再单独实现命名管道：</p>
+<pre class="code" data-lang=""><code>浏览器 UI ─┐
+           ├─▶ 127.0.0.1:8444 /api/*  ──▶ app 状态机 ──▶ 平台层
+fsgw CLI  ─┘        （token 鉴权）</code></pre>
+<p>这样&quot;开关&quot;只有一条实现路径，验收也只需要验一处。</p>
+<h3 id="sec-31">11.2 界面结构</h3>
+<p>单页五块，从上到下按&quot;危险程度递增、使用频率递减&quot;排列：</p>
+<div class="table-wrap"><table><thead><tr><th>区块</th><th>内容</th><th>说明</th></tr></thead><tbody><tr><td>总开关</td><td>四态分段控件（OFF / LAN / WAN / ALL）+ 当前状态徽标 + 一键全关</td><td>全关按钮独立配色，需二次确认</td></tr><tr><td>服务面</td><td>SMB / DLNA / WebDAV 三张卡：监听地址、就绪状态、复制连接串（<code class="inline">smb://192.168.x.x</code>、<code class="inline">https://…</code>）</td><td>连接串可直接发给手机</td></tr><tr><td>共享目录</td><td>白名单列表、只读/媒体标记、增删入口</td><td>增删走目录浏览接口选择</td></tr><tr><td>索引与快照</td><td>文件数、待处理事件、写队列深度、最近重建；快照占用、版本数、配额条、清理按钮</td><td>带 sparkline（手写 SVG，不引图表库）</td></tr><tr><td>诊断与审计</td><td>匿名 SMB 客户端策略、445 占用、磁盘空间、防火墙规则状态；最近审计日志（可筛选&quot;拒绝&quot;）</td><td>把 D-03 那类&quot;连不上但不是 bug&quot;的问题前置暴露</td></tr></tbody></table></div>
+<h3 id="sec-32">11.3 API 一览</h3>
+<p>所有接口前缀 <code class="inline">/api</code>，均需 token。变更类返回 202 + <code class="inline">operation_id</code>（开关是长任务，不能用一次请求的成败表示）。</p>
+<div class="table-wrap"><table><thead><tr><th>方法</th><th>路径</th><th>用途</th><th>备注</th></tr></thead><tbody><tr><td>GET</td><td><code class="inline">/api/status</code></td><td>状态快照：四态、各面就绪、索引统计、快照占用</td><td>前端首屏</td></tr><tr><td>GET</td><td><code class="inline">/api/events</code></td><td>SSE 推送：状态变化、队列深度、日志尾</td><td>2s 心跳</td></tr><tr><td>POST</td><td><code class="inline">/api/switch</code></td><td><code class="inline">{state:&quot;OFF|LAN|WAN|ALL&quot;}</code></td><td>二次确认字段 <code class="inline">confirm</code></td></tr><tr><td>GET</td><td><code class="inline">/api/operations/{id}</code></td><td>长任务进度与失败阶段</td><td>失败带 <code class="inline">stage</code></td></tr><tr><td>GET</td><td><code class="inline">/api/config</code></td><td>脱敏配置（口令、hash 一律打码）</td><td></td></tr><tr><td>PUT</td><td><code class="inline">/api/config</code></td><td>校验后原子写回（临时文件 + rename）</td><td>需重启的字段标 <code class="inline">requires_restart</code></td></tr><tr><td>GET/POST/DELETE</td><td><code class="inline">/api/shares</code></td><td>白名单增删</td><td>删除共享需 <code class="inline">confirm</code></td></tr><tr><td>POST</td><td><code class="inline">/api/index/reconcile</code></td><td>子树重建</td><td>只接受已配置共享内的路径</td></tr><tr><td>GET</td><td><code class="inline">/api/fs/list</code></td><td>列目录（仅子目录名 + 可写标记）</td><td>见 11.6</td></tr><tr><td>POST</td><td><code class="inline">/api/snapshot/gc</code></td><td>立即清理</td><td></td></tr><tr><td>GET</td><td><code class="inline">/api/audit</code></td><td>审计分页查询</td><td><code class="inline">since</code>、<code class="inline">limit</code>、<code class="inline">result</code></td></tr><tr><td>GET</td><td><code class="inline">/api/diagnose</code></td><td>一次性体检</td><td>匿名策略、端口、磁盘、防火墙</td></tr></tbody></table></div>
+<h3 id="sec-33">11.4 本地网页的真实威胁：CSRF 与 DNS rebinding</h3>
+<p>控制台跑在 <code class="inline">127.0.0.1</code>，这不等于安全。用户浏览器里的任何网页都能向 <code class="inline">http://127.0.0.1:8444</code> 发起请求；DNS rebinding 还能让攻击者域名解析到回环地址，从而绕过同源限制读取响应。控制台一旦被第三方页面驱动去开 <code class="inline">ALL</code>，等于把共享直接推到公网。</p>
+<p>四道防线，缺一不可：</p>
+<ol><li><strong>token</strong>：<code class="inline">data/control.token</code>，首次启动生成 32 字节随机值，写入时限定当前用户 ACL。前端从 URL fragment 取（不进 <code class="inline">Referer</code>、不进服务端日志），存 <code class="inline">sessionStorage</code>，之后每个请求带 <code class="inline">X-FSGW-Token</code>。服务端用 <code class="inline">crypto/subtle.ConstantTimeCompare</code> 比对</li><li><strong>Origin 校验</strong>：<code class="inline">Origin</code> 必须为空或等于 <code class="inline">http://127.0.0.1:8444</code> / <code class="inline">http://localhost:8444</code>，否则 403</li><li><strong>Host 校验</strong>：<code class="inline">Host</code> 必须是 <code class="inline">127.0.0.1:8444</code> 或 <code class="inline">localhost:8444</code>。这是防 DNS rebinding 的关键一步——攻击者域名解析到回环后，<code class="inline">Host</code> 头仍是攻击者域名，直接被拒</li><li><strong>不回 CORS 头</strong>，且变更接口要求自定义头。跨源带自定义头的请求会先发 preflight，我们不应答 <code class="inline">Access-Control-Allow-*</code>，请求根本到不了业务逻辑</li></ol>
+<p>补充：<code class="inline">GET /api/fs/list</code> 与 <code class="inline">/api/audit</code> 同样要鉴权，不要因为&quot;看起来是只读&quot;就放过——它们能泄漏本机目录结构。</p>
+<h3 id="sec-34">11.5 长任务与状态推送</h3>
+<p>开关一次要动防火墙、起停监听、自检，不是一次请求能同步完成的：</p>
+<ul><li><code class="inline">POST /api/switch</code> 立即返回 202 与 <code class="inline">operation_id</code>，实际执行在后台 goroutine</li><li>进度与失败阶段通过 SSE 推给前端，同时 <code class="inline">GET /api/operations/{id}</code> 可主动查询</li><li>失败时的 <code class="inline">stage</code> 直接对应 5.2 的五步，前端展示&quot;卡在创建防火墙规则&quot;，而不是笼统的&quot;操作失败&quot;</li></ul>
+<h3 id="sec-35">11.6 前端拿不到本地路径，所以需要目录浏览接口</h3>
+<p>浏览器出于安全不提供本地绝对路径，<code class="inline">&lt;input type=&quot;file&quot; webkitdirectory&gt;</code> 只给相对路径。要&quot;添加共享目录&quot;就必须由后端列目录：</p>
+<pre class="code" data-lang=""><code>GET /api/fs/list?path=D:\
+→ {&quot;path&quot;:&quot;D:\\&quot;,&quot;entries&quot;:[{&quot;name&quot;:&quot;share&quot;,&quot;is_dir&quot;:true},{&quot;name&quot;:&quot;backup&quot;,&quot;is_dir&quot;:true}]}</code></pre>
+<p>约束，全部在实现里硬编码，不做成配置：</p>
+<ul><li>只返回<strong>子目录</strong>，不返回文件名、不返回大小、不返回内容</li><li>只接受盘符根（<code class="inline">D:\</code>）或已配置共享根下的路径，拒绝 <code class="inline">..</code>、拒绝 UNC（<code class="inline">\\host\share</code>）</li><li>路径规范化复用 <code class="inline">internal/vfs</code>，与协议面同一套规则，不另写一份</li><li>每次调用写审计（谁在什么时候浏览了哪个目录）</li></ul>
+<h3 id="sec-36">11.7 危险操作的产品层保护</h3>
+<p>技术防线之外，交互层也要拦一次：</p>
+<ul><li>四态开关切换需二次确认（按钮变&quot;确认开启 LAN？&quot;），不只弹一个&quot;确定/取消&quot;</li><li>从 <code class="inline">WAN</code>/<code class="inline">ALL</code> 回到 <code class="inline">OFF</code> 不需要确认，但从 <code class="inline">OFF</code> 到 <code class="inline">WAN</code> 必须显式说明后果（&quot;外部可访问&quot;）</li><li>修改配置保存前展示 diff，只列出变更字段</li><li>不在控制台提供&quot;删除快照&quot;&quot;清空索引&quot;这类不可逆操作的一键入口，只提供带确认的单项操作</li></ul>
+<h2 id="sec-37">12. 版本与快照</h2>
+<p>语义定义与存储布局见 <code class="inline">02-数据模型与事务.md</code>。这里只固定三条对外承诺：</p>
+<ol><li><strong>索引版本链</strong>（路径、大小、mtime、哈希、变更类型）对所有来源可信</li><li><strong>内容快照</strong>对网关自身写路径（WebDAV 上传、内置页面）可承诺；对 SMB 来源为 best-effort，UI 上必须显示&quot;该版本可能不完整&quot;</li><li><strong>移动与重命名永不产生版本</strong>。<code class="inline">versions</code> 表在移动事务中零写入，这是可被自动化验收的断言</li></ol>
+<h2 id="sec-38">13. 安全模型</h2>
+<p>三层，从外到内，任一层失效仍有兜底。</p>
+<div class="table-wrap"><table><thead><tr><th>层</th><th>手段</th><th>失效后果</th></tr></thead><tbody><tr><td>一层：开关即边界</td><td>OFF 时零监听、零防火墙规则</td><td>无</td></tr><tr><td>二层：协议最小化</td><td>禁 SMBv1、WebDAV 方法白名单、445 只对 localsubnet、WAN 只绑回环</td><td>攻击面扩大但需先过开关</td></tr><tr><td>三层：目录最小化</td><td>共享根白名单、VFS 穿越防护、不共享系统盘</td><td>单目录泄漏</td></tr></tbody></table></div>
+<p>额外措施：</p>
+<ul><li>所有写操作记审计（时间、来源、路径、结果、客户端 IP），滚动文件，默认保留 30 天</li><li>WAN 面可选 IP 白名单与失败登录限速（同 IP 5 次失败锁 10 分钟）</li><li>进程以 LocalSystem 运行时，防火墙规则命名为 <code class="inline">FSGW-</code> 前缀，便于人工核查与一键清理</li><li><strong>控制面单独成域</strong>：<code class="inline">ctlapi</code> 只绑回环、只接受带 token 的请求、校验 Origin 与 Host（防 DNS rebinding），与 WebDAV 用两套 mux 与中间件。控制面的威胁模型与协议面完全不同——它面对的不是&quot;外部陌生人&quot;而是&quot;用户浏览器里的其它网页&quot;，详见 11.4</li></ul>
+<h2 id="sec-39">14. 配置模型</h2>
+<p><code class="inline">config.yaml</code> 放在 <code class="inline">D:\fsgw\config.yaml</code>（程序目录），与数据分离：</p>
+<pre class="code" data-lang="yaml"><code>version: 1
+
+# 数据目录：SQLite、快照区、日志、state.json
+data_dir: D:\fsgw\data
+
+shares:
+  - share_id: main
+    root: D:\share
+    name: share            # SMB 共享名
+    writable: true         # 整个共享可读写（已确认）
+    deny_delete: false     # 是否禁止删除
+    media: true            # 参与 DLNA
+    case_sensitive: false
+    dirs:
+      - rel_path: &quot;&quot;       # 根
+        writable: true
+      - rel_path: private
+        writable: false    # 子目录可覆盖为只读
+
+index:
+  hash_algorithm: sha256   # stdlib，零依赖
+  max_hash_size_mb: 512    # 超过只算 mtime+size
+  write_queue_structural: 1024
+  write_queue_content: 8192
+  debounce_structural_ms: 150
+  debounce_content_ms: 400
+  reconcile_interval: 6h
+  reconcile_recent_window: 24h
+
+snapshot:
+  enabled: true
+  mode: best_effort        # best_effort | gateway_only
+  dir: D:\fsgw\data\snapshots
+  max_versions_per_object: 10
+  min_free_gb: 20          # 低于此值停止快照并告警
+  quota_gb: 200
+  retention:               # 时间梯度
+    - { within: 24h, keep: all }
+    - { within: 7d,  keep: hourly }
+    - { within: 30d, keep: daily }
+    - { beyond: 30d, keep: latest }
+
+smb:
+  enabled: true
+  auth: both               # guest | account | both
+  account_name: fsgw
+  allow_smb1: false
+  bind_profile: private    # 防火墙 profile
+  lan_only: true           # 445 只放行 localsubnet
+
+dlna:
+  enabled: true
+  http_port: 8200
+  friendly_name: 家庭共享
+
+webdav:
+  enabled: true
+  bind: 127.0.0.1:8443
+  tls_cert: &quot;&quot;
+  tls_key: &quot;&quot;
+  password_hash: &quot;&quot;        # bcrypt
+  expose_versions: true
+  allow_plain_http_localhost: true
+
+ui:
+  enabled: true
+  bind: 127.0.0.1:8444     # 只允许回环，配置校验阶段拒绝非回环地址
+  open_browser_on_start: false
+  token_file: D:\fsgw\data\control.token
+  allowed_origins:         # 留空则默认只允许自身地址
+    - http://127.0.0.1:8444
+    - http://localhost:8444
+
+switch:
+  startup_state: OFF       # OFF | LAN | WAN | ALL
+  require_admin_for_on: true
+
+log:
+  level: info
+  dir: D:\fsgw\data\logs
+  audit_retention_days: 30</code></pre>
+<p>配置校验在启动时一次性完成，失败直接退出并打印具体字段，不做&quot;降级启动&quot;。</p>
+<h2 id="sec-40">15. 可观测性</h2>
+<ul><li><code class="inline">fsgw status</code>：与 <code class="inline">GET /api/status</code> 同一份数据，CLI 只是做了格式化</li><li><code class="inline">GET /healthz</code>（回环，免 token）：进程存活 + DB 可写。免 token 是为了让外部探针能打，因此<strong>只回 <code class="inline">ok</code>/<code class="inline">degraded</code>，不含任何细节</strong></li><li><code class="inline">GET /metrics</code>（回环，需 token，Prometheus 文本格式）：<code class="inline">fsgw_events_total{op}</code>、<code class="inline">fsgw_write_queue_depth</code>、<code class="inline">fsgw_reconcile_duration_seconds</code>、<code class="inline">fsgw_snapshot_bytes</code></li><li>控制台本身即主要观测面：状态、队列深度、审计尾都在 UI 上，不需要另开一套</li><li>日志：结构化 JSON 行，滚动 20MiB × 5；审计独立文件，不复用调试日志</li></ul>
+<h2 id="sec-41">16. 包职责与依赖方向</h2>
+<p>依赖只能自上而下，<code class="inline">platform</code> 是最底层，不 import 任何业务包。</p>
+<pre class="code" data-lang=""><code>cmd/fsgw      → app
+app           → config, index, vfs, smbhost, dlna, webdav, snapshot, audit, ctlapi, platform
+ctlapi        → app(状态机), index(只读统计), config, audit, vfs(路径校验)
+webui         → (纯静态资源，只被 ctlapi 通过 embed 引用，不 import 任何 Go 包)
+vfs           → index, platform/fileid
+webdav        → vfs, index, snapshot(只读)
+dlna          → vfs, index
+smbhost       → platform/firewall, config
+snapshot      → index, platform/link
+index         → (无业务依赖)
+platform/*    → (仅 x/sys)</code></pre>
+<p>注意 <code class="inline">webui</code> 与 <code class="inline">ctlapi</code> 的边界：前端不知道任何业务规则，所有校验（可写性、路径合法性、状态机前置条件）都在 <code class="inline">ctlapi</code> 之后的 Go 侧完成。前端只负责展示与收集输入——这样即使前端被改坏，也不会绕过安全校验。</p>
+<h2 id="sec-42">17. 外部依赖</h2>
+<div class="table-wrap"><table><thead><tr><th>依赖</th><th>用途</th><th>备注</th></tr></thead><tbody><tr><td><code class="inline">modernc.org/sqlite</code></td><td>SQLite 驱动</td><td>纯 Go，免 CGO</td></tr><tr><td><code class="inline">golang.org/x/sys/windows</code></td><td>Win32 API 绑定</td><td>FileID、ReadDirectoryChangesW、服务、硬链接</td></tr><tr><td><code class="inline">golang.org/x/net/webdav</code></td><td>WebDAV 底座</td><td>只读二次封装</td></tr><tr><td><code class="inline">gopkg.in/yaml.v3</code></td><td>配置</td><td></td></tr><tr><td>DLNA 库</td><td>SSDP + ContentDirectory</td><td>选型放在 T-31，需评估 Windows 下的多播行为</td></tr><tr><td><code class="inline">golang.org/x/crypto/bcrypt</code></td><td>口令</td><td></td></tr><tr><td>（无）</td><td>控制台前端</td><td>原生 HTML/CSS/JS，无框架、无包管理器、无构建步骤，<code class="inline">embed.FS</code> 打包</td></tr><tr><td>（无）</td><td>控制台路由</td><td>Go 1.22 <code class="inline">ServeMux</code> 的 method pattern 足够，不引 chi/gin</td></tr></tbody></table></div>
+<p>原则：能自写的一百行不留依赖，能标准库的不引第三方。SMB 相关的库一律不进主路径（D-01）。前端同样适用这条——不引图表库，sparkline 手写 SVG 不到五十行；不引 UI 框架，五个卡片加一张表不值得为它引入构建链。</p></section>
+<section class="card"><h2 class="doc-title" id="doc-02">02 数据模型与事务</h2>
+<p>本文是编码时的逐条对照物。所有 DDL 可直接执行，所有断言都可被自动化验收。</p>
+<h2 id="sec-43">1. 表结构与职责</h2>
+<pre class="code" data-lang=""><code>shares ──┐
+         ├─ share_dirs          白名单与可写性
+         │
+objects ─┴─ files              内容身份（file_id）与路径条目分离
+            │
+            ├─ versions        索引版本链（元数据版本，不产生于移动）
+            ├─ snapshots       内容快照实体（可选，受影响于 D-02）
+            └─ path_history    路径变更流水（移动只写这里）
+
+pending_moves                  监听事件的配对中间态
+suppress                       网关自身写入的事件抑制
+reconcile_log                  范围重建记录
+schema_meta                    迁移版本</code></pre>
+<p><strong>核心建模决策</strong>：<code class="inline">files</code> 与 <code class="inline">objects</code> 分离。一个 <code class="inline">object</code>（内容身份）可以对应多个 <code class="inline">files</code> 行（硬链接、多共享），这样版本链挂在 <code class="inline">object_id</code> 上，天然符合&quot;路径是属性、不是身份&quot;。如果按讨论稿早期的&quot;file_id 做主键&quot;简化写法，硬链接场景会直接冲突。</p>
+<h2 id="sec-44">2. 完整 DDL</h2>
+<pre class="code" data-lang="sql"><code>PRAGMA journal_mode = WAL;
+PRAGMA synchronous = NORMAL;
+PRAGMA foreign_keys = ON;
+PRAGMA busy_timeout = 5000;
+PRAGMA wal_autocheckpoint = 1000;
+
+CREATE TABLE IF NOT EXISTS schema_meta (
+  key    TEXT PRIMARY KEY,
+  value  TEXT NOT NULL
+);
+
+-- 共享与白名单 ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS shares (
+  share_id      TEXT PRIMARY KEY,          -- 'main'
+  root_path     TEXT NOT NULL,             -- D:\share（\?\ 前缀形式）
+  root_key      TEXT NOT NULL,             -- 小写、正斜杠
+  volume_serial INTEGER NOT NULL DEFAULT 0,
+  writable      INTEGER NOT NULL DEFAULT 1,
+  deny_delete   INTEGER NOT NULL DEFAULT 0,
+  media         INTEGER NOT NULL DEFAULT 0,
+  created_at    INTEGER NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS share_dirs (
+  id        INTEGER PRIMARY KEY AUTOINCREMENT,
+  share_id  TEXT NOT NULL REFERENCES shares(share_id) ON DELETE CASCADE,
+  rel_path  TEXT NOT NULL,                 -- '' 为根，'/private' 形式
+  path_key  TEXT NOT NULL,
+  writable  INTEGER NOT NULL DEFAULT 1,
+  media     INTEGER NOT NULL DEFAULT 0,
+  UNIQUE(share_id, path_key)
+);
+
+-- 内容身份 ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS objects (
+  object_id      TEXT PRIMARY KEY,         -- UUIDv7，网关生成，跨卷移动时随迁移
+  native_file_id TEXT,                     -- 'v2:&lt;volser&gt;:&lt;hex32&gt;' 或 'v1:&lt;volser&gt;:&lt;hex16&gt;'
+  volume_serial  INTEGER,
+  first_seen_at  INTEGER NOT NULL,
+  last_seen_at   INTEGER NOT NULL,
+  state          INTEGER NOT NULL DEFAULT 0  -- 0=live 1=gone 2=frozen
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_objects_native
+  ON objects(volume_serial, native_file_id);
+
+-- 路径条目 ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS files (
+  file_id     INTEGER PRIMARY KEY AUTOINCREMENT,
+  share_id    TEXT NOT NULL REFERENCES shares(share_id) ON DELETE CASCADE,
+  object_id   TEXT NOT NULL REFERENCES objects(object_id),
+  parent_path TEXT NOT NULL,               -- '' 为根，'/' 分隔，小写
+  name        TEXT NOT NULL,               -- 原始大小写
+  name_key    TEXT NOT NULL,               -- 小写
+  path        TEXT NOT NULL,               -- 完整相对路径（原始大小写）
+  path_key    TEXT NOT NULL,               -- 完整相对路径（小写）
+  kind        INTEGER NOT NULL,            -- 0=file 1=dir
+  size        INTEGER NOT NULL DEFAULT 0,
+  mtime_ns    INTEGER NOT NULL DEFAULT 0,
+  content_hash TEXT,                       -- sha256 hex，延迟计算
+  hash_state  INTEGER NOT NULL DEFAULT 0,  -- 0=none 1=queued 2=done 3=skipped 4=failed
+  status      INTEGER NOT NULL DEFAULT 0,  -- 0=active 1=writing 2=stale 3=deleted
+  last_source INTEGER NOT NULL DEFAULT 0,  -- 0=unknown 1=smb 2=gateway 3=local
+  created_at  INTEGER NOT NULL,
+  updated_at  INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_files_path     ON files(path_key);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_files_parent   ON files(parent_path, name_key);
+CREATE INDEX IF NOT EXISTS        ix_files_object   ON files(object_id);
+CREATE INDEX IF NOT EXISTS        ix_files_status   ON files(status) WHERE status &lt;&gt; 0;
+
+-- 索引版本链 --------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS versions (
+  id           INTEGER PRIMARY KEY AUTOINCREMENT,
+  object_id    TEXT NOT NULL REFERENCES objects(object_id),
+  seq          INTEGER NOT NULL,           -- 从 1 递增，per object
+  size         INTEGER NOT NULL,
+  mtime_ns     INTEGER NOT NULL,
+  content_hash TEXT,
+  change       INTEGER NOT NULL,           -- 1=write 2=truncate 3=meta 4=appear
+  source       INTEGER NOT NULL,
+  snapshot_id  TEXT,                       -- 有内容快照时回填
+  recorded_at  INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_versions_seq ON versions(object_id, seq);
+
+-- 内容快照 ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS snapshots (
+  snapshot_id  TEXT PRIMARY KEY,
+  object_id    TEXT NOT NULL REFERENCES objects(object_id),
+  version_id   INTEGER REFERENCES versions(id),
+  content_hash TEXT,
+  storage      TEXT NOT NULL,              -- 'link' | 'copy'
+  rel_path     TEXT NOT NULL,              -- 相对 snapshot.dir
+  size         INTEGER NOT NULL,
+  integrity    INTEGER NOT NULL DEFAULT 0, -- 0=complete 1=partial（best-effort 结果）
+  created_at   INTEGER NOT NULL,
+  pinned       INTEGER NOT NULL DEFAULT 0
+);
+CREATE INDEX IF NOT EXISTS ix_snapshots_object ON snapshots(object_id, created_at DESC);
+CREATE INDEX IF NOT EXISTS ix_snapshots_created ON snapshots(created_at);
+
+-- 路径历史 ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS path_history (
+  id         INTEGER PRIMARY KEY AUTOINCREMENT,
+  object_id  TEXT NOT NULL REFERENCES objects(object_id),
+  from_path  TEXT,
+  to_path    TEXT,
+  change     INTEGER NOT NULL,             -- 1=create 2=move 3=rename 4=delete 5=restore 6=unshare
+  move_kind  INTEGER NOT NULL DEFAULT 0,   -- 0=n/a 1=single-volume 2=cross-volume-confirmed 3=unconfirmed
+  moved_at   INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_ph_object ON path_history(object_id, moved_at DESC);
+CREATE INDEX IF NOT EXISTS ix_ph_from   ON path_history(from_path);
+
+-- 事件配对 ----------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS pending_moves (
+  id             INTEGER PRIMARY KEY AUTOINCREMENT,
+  cookie         TEXT NOT NULL,            -- Windows: '&lt;seq&gt;' 合成；Linux: inotify cookie
+  change_type    INTEGER NOT NULL,         -- 1=from 2=to
+  path           TEXT NOT NULL,
+  path_key       TEXT NOT NULL,
+  native_file_id TEXT,
+  seen_at        INTEGER NOT NULL,
+  state          INTEGER NOT NULL DEFAULT 0 -- 0=pending 1=paired 2=timeout
+);
+CREATE INDEX IF NOT EXISTS ix_pm_state ON pending_moves(state, seen_at);
+
+-- 网关写入抑制 ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS suppress (
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  path_key        TEXT NOT NULL,
+  expect_size     INTEGER,
+  expect_mtime_ns INTEGER,
+  expires_at      INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_suppress ON suppress(path_key, expires_at);
+
+-- 范围重建记录 ------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS reconcile_log (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  root_path   TEXT NOT NULL,
+  reason      TEXT NOT NULL,               -- 'overflow' | 'timer' | 'manual'
+  nodes_seen  INTEGER NOT NULL DEFAULT 0,
+  inserted    INTEGER NOT NULL DEFAULT 0,
+  updated     INTEGER NOT NULL DEFAULT 0,
+  deleted     INTEGER NOT NULL DEFAULT 0,
+  duration_ms INTEGER NOT NULL DEFAULT 0,
+  created_at  INTEGER NOT NULL
+);</code></pre>
+<h2 id="sec-45">3. 索引清单与查询对照</h2>
+<div class="table-wrap"><table><thead><tr><th>查询</th><th>索引</th><th>说明</th></tr></thead><tbody><tr><td><code class="inline">ReadDir(parent)</code></td><td><code class="inline">ux_files_parent(parent_path, name_key)</code></td><td>排序天然由索引给出，无 filesort</td></tr><tr><td>路径解析逐级</td><td>同上</td><td>每级一次等值查询，深度通常 ≤6</td></tr><tr><td>精确路径</td><td><code class="inline">ux_files_path(path_key)</code></td><td>用于 WebDAV <code class="inline">GET</code>/<code class="inline">MOVE</code> 校验</td></tr><tr><td>版本查询</td><td><code class="inline">ux_versions_seq(object_id, seq)</code></td><td>取 <code class="inline">MAX(seq)</code> 与列表</td></tr><tr><td>快照列表</td><td><code class="inline">ix_snapshots_object</code></td><td>按时间倒序</td></tr><tr><td>旧路径重定向</td><td><code class="inline">ix_ph_from(from_path)</code></td><td>301 目标</td></tr><tr><td>待处理配对扫描</td><td><code class="inline">ix_pm_state(state, seen_at)</code></td><td>超时定性任务</td></tr></tbody></table></div>
+<p><code class="inline">ReadDir</code> 的查询必须写成覆盖索引形式，避免回表：</p>
+<pre class="code" data-lang="sql"><code>SELECT name, kind, size, mtime_ns, status
+  FROM files
+ WHERE path_key = ? AND status &lt;&gt; 3
+ ORDER BY name_key;</code></pre>
+<p>注意：<code class="inline">ix_files_parent</code> 上带 <code class="inline">path_key</code> 而不是 <code class="inline">parent_path</code> 的等值，是为了让&quot;路径解析&quot;（按完整路径查）和&quot;目录列举&quot;共用同一索引。列举时 <code class="inline">parent_path = ?</code> 也走同一索引前缀。</p>
+<h2 id="sec-46">4. 单写队列</h2>
+<p>SQLite 在 WAL 下多读单写。所有写操作经由一个 goroutine 串行化，避免 <code class="inline">SQLITE_BUSY</code> 抖动。</p>
+<pre class="code" data-lang=""><code>            ┌──────────────┐
+事件/请求 ──▶│ structural   │cap 1024  ─┐
+            └──────────────┘           ├─▶ writer goroutine ──▶ 事务 ──▶ DB
+            ┌──────────────┐           │
+事件/请求 ──▶│ content      │cap 8192  ─┘
+            └──────────────┘</code></pre>
+<p>调度规则：</p>
+<ol><li>每次取任务时先非阻塞消费 <code class="inline">structural</code>，空才取 <code class="inline">content</code>。结构性变更延迟目标 ≤20ms，内容变更 ≤200ms</li><li>单事务最多 200 条写，超出拆批；拆分引入的是&quot;多批次可见&quot;而非&quot;半提交可见&quot;</li><li>写队列深度超 80% 时打 <code class="inline">warn</code> 日志并上报 metrics；超 100% 时<strong>丢弃内容类任务但保留结构性任务</strong>，被丢弃的内容变更由定期 reconcile 兜底</li><li>读连接池 8 条，全部 <code class="inline">query_only=1</code>，从结构上保证读路径不会误写</li></ol>
+<p>控制面（<code class="inline">ctlapi</code>）不特殊：<code class="inline">/api/status</code>、<code class="inline">/api/audit</code> 只走读连接池；<code class="inline">/api/shares</code> 写 <code class="inline">shares</code>/<code class="inline">share_dirs</code> 必须投递到同一个写队列，不允许开第二条写连接。控制台看起来&quot;只是个界面&quot;，但它对库的访问规则和 SMB 客户端完全一样。</p>
+<h2 id="sec-47">5. 事务顺序</h2>
+<h3 id="sec-48">5.1 监听驱动的变更（SMB 与本机修改都走这条）</h3>
+<div class="table-wrap"><table><thead><tr><th>步骤</th><th>动作</th><th>可见性</th></tr></thead><tbody><tr><td>1</td><td>查 <code class="inline">suppress</code>，命中且 size/mtime 匹配则丢弃</td><td>—</td></tr><tr><td>2</td><td>分类事件（结构性 / 内容性）</td><td>—</td></tr><tr><td>3</td><td>取 <code class="inline">FileID</code>（删除事件除外，用路径匹配）</td><td>—</td></tr><tr><td>4</td><td>upsert <code class="inline">objects</code>（按 <code class="inline">native_file_id</code> 命中则复用，否则新建 UUIDv7）</td><td>不可见</td></tr><tr><td>5</td><td>结构性：写 <code class="inline">files</code> + <code class="inline">path_history</code>；内容性：写 <code class="inline">files</code> 元数据 + <code class="inline">versions</code></td><td>不可见</td></tr><tr><td>6</td><td>COMMIT</td><td>一次性可见</td></tr><tr><td>7</td><td>异步入队：算哈希、抓快照、更新 <code class="inline">snapshots.version_id</code></td><td>事后</td></tr></tbody></table></div>
+<p>第 5 步与第 6 步之间不允许任何外部读取路径介入。<code class="inline">ReadDir</code> 只读已提交数据，天然满足。</p>
+<h3 id="sec-49">5.2 网关驱动的变更（WebDAV 写、快照清理、reconcile 补录）</h3>
+<p>网关是写入方时，顺序不同：<strong>先登记 suppress，再动磁盘，再写库</strong>。</p>
+<ol><li>插入 <code class="inline">suppress(path_key, expect_size, expect_mtime_ns, expires_at=now+30s)</code></li><li>执行磁盘操作</li><li>写库（同一事务内更新 <code class="inline">files</code>，追加 <code class="inline">versions</code>）</li><li>suppress 记录保留到过期，期间到达的 watcher 事件被吞掉</li></ol>
+<p>若第 3 步失败但第 2 步成功，进入&quot;库比盘旧&quot;状态，由 reconcile 修正；同时把该条目 <code class="inline">hash_state=failed</code> 便于排查。<strong>不允许</strong>反过来&quot;读到盘上有什么就改库&quot;。</p>
+<h3 id="sec-50">5.3 移动事务（重点）</h3>
+<p>一次移动 = 一个事务，<code class="inline">versions</code> 零写入。伪 SQL：</p>
+<pre class="code" data-lang="sql"><code>BEGIN IMMEDIATE;
+
+-- 1. 找源条目
+SELECT object_id FROM files WHERE path_key = :old LIMIT 1;
+
+-- 2. 更新路径（object_id 不变，file_id 不变）
+UPDATE files
+   SET parent_path = :new_parent,
+       name        = :new_name,
+       name_key    = :new_name_key,
+       path        = :new_path,
+       path_key    = :new_path_key,
+       updated_at  = :now
+ WHERE path_key = :old;
+
+-- 3. 追加路径历史
+INSERT INTO path_history(object_id, from_path, to_path, change, move_kind, moved_at)
+VALUES (:object_id, :old, :new, 2, :move_kind, :now);
+
+-- 4. 目录移动时级联更新子项路径（同事务）
+UPDATE files
+   SET path = :new || substr(path, length(:old) + 1),
+       path_key = :new_key || substr(path_key, length(:old_key) + 1)
+ WHERE path_key LIKE :old_key || '/%';
+
+COMMIT;</code></pre>
+<p><strong>验收断言</strong>（可自动化）：</p>
+<pre class="code" data-lang="sql"><code>SELECT (SELECT COUNT(*) FROM versions WHERE object_id = :id AND recorded_at &gt;= :t0) = 0
+   AND (SELECT COUNT(*) FROM path_history WHERE object_id = :id AND moved_at &gt;= :t0) = 1;</code></pre>
+<h2 id="sec-51">6. 内容快照：能力分级（重要）</h2>
+<p>这是全篇最需要如实说明的部分。D-01 把 SMB 改成托管系统共享之后，网关不在写入路径上，&quot;写前捕获&quot;失去了立足点。</p>
+<h3 id="sec-52">6.1 为什么硬链接方案不成立</h3>
+<p>硬链接不复制内容，只增加目录项指向同一 inode。当文件被原地覆盖时，所有硬链接看到的是<strong>新内容</strong>。因此&quot;写前硬链接&quot;只有在<strong>写发生之前</strong>执行才有意义——而 SMB 客户端写入时，网关拿到的第一个事件已经是&quot;写已经开始&quot;。</p>
+<p>唯一真正有效的写前捕获方式是：网关自己持有写句柄（自研协议栈），或内核 minifilter 拦截 create/write。两者都超出第一版范围。</p>
+<h3 id="sec-53">6.2 分级承诺</h3>
+<div class="table-wrap"><table><thead><tr><th>级别</th><th>内容</th><th>来源</th><th>承诺</th></tr></thead><tbody><tr><td>L0 索引版本链</td><td>路径、size、mtime、哈希、变更类型、时间</td><td>全部来源</td><td><strong>可承诺</strong>。事后送达也足够，元数据不会丢</td></tr><tr><td>L1 网关写路径快照</td><td>完整旧内容</td><td>WebDAV 上传、内置上传页、reconcile 补录</td><td><strong>可承诺</strong>（写前登记 + 写前复制/链接）</td></tr><tr><td>L2 SMB 来源 best-effort</td><td>首个 Write 事件时抓取当前字节</td><td>SMB 客户端</td><td><strong>不承诺</strong>。大文件慢写通常能抓到较完整的前段；小文件覆盖基本抓不到</td></tr><tr><td>L3 粗粒度卷影</td><td>整卷时点副本</td><td>可选启用 VSS 定时任务</td><td>时间粒度粗（默认 15 分钟），但完整、可靠、零协议改造成本</td></tr></tbody></table></div>
+<p>对外 UI 必须显示 <code class="inline">integrity</code>：L2 抓到的标记 <code class="inline">partial</code>，历史版本页显示&quot;该版本可能不完整&quot;。</p>
+<h3 id="sec-54">6.3 存储布局</h3>
+<pre class="code" data-lang=""><code>D:\fsgw\data\snapshots\
+  ab\cd\abcdef...-1.bin        按 content_hash 前 4 位分两级目录
+  ab\cd\abcdef...-1.json       伴生元数据（object_id, version, storage, size）</code></pre>
+<p>同卷优先 <code class="inline">CreateHardLinkW</code>（<code class="inline">storage=link</code>，零空间成本），跨卷退化为复制（<code class="inline">storage=copy</code>，异步限速，默认 20 MiB/s）。同一 <code class="inline">content_hash</code> 只存一份，<code class="inline">snapshots</code> 表通过多行引用同一 <code class="inline">rel_path</code> 实现去重。</p>
+<h3 id="sec-55">6.4 清理器</h3>
+<p>独立 goroutine，每 10 分钟一轮，按顺序执行：</p>
+<ol><li>若可用空间 &lt; <code class="inline">min_free_gb</code>：告警并按&quot;最旧 + 最低价值&quot;顺序清理，直到回升至阈值。<strong>绝不清理当前活动文件</strong></li><li>应用保留策略：24h 内全留 / 7d 内每小时留一 / 30d 内每天留一 / 之后只留最新</li><li>应用每文件上限（默认 10 个内容快照）</li><li>应用总配额（默认 200 GiB）</li><li>清理 <code class="inline">snapshots</code> 行与磁盘文件保持同事务顺序：先删行（事务），再删文件（尽力，失败进回收队列重试）</li></ol>
+<h2 id="sec-56">7. 事件配对与超时定性</h2>
+<p>Windows 的 <code class="inline">RENAMED_OLD_NAME</code> / <code class="inline">RENAMED_NEW_NAME</code> 天然连续，但客户端崩溃、网络中断会导致只有一半。</p>
+<p>状态流转：</p>
+<pre class="code" data-lang=""><code>收到 OLD_NAME → pending_moves(state=pending, change_type=from)
+收到 NEW_NAME → 若存在同 cookie 的 from：
+                  ├─ 取 NEW 的 FileID
+                  ├─ 与 from 路径对应的 object 匹配（同卷 → FileID 相同）
+                  └─ 执行移动事务（versions 零写入）
+              → 若不存在 from：
+                  └─ 视为外部移入：新建条目，path_history 记 create
+
+超时扫描（每 2s，阈值 500ms）
+  ├─ 孤立 from：源路径已不存在 → 判定为删除，path_history 记 delete
+  ├─ 孤立 from：源路径仍存在 → 丢弃记录（假事件）
+  └─ 孤立 NEW：按新建处理</code></pre>
+<p>跨卷移动：FileID 变化，走哈希 + 大小 + 时间窗口（±10s）匹配。匹配成功则<strong>迁移 <code class="inline">object_id</code> 归属</strong>，<code class="inline">versions</code> 不追加，<code class="inline">path_history.move_kind=2</code>；匹配失败则如实按&quot;删除 + 新增&quot;处理，<code class="inline">move_kind=3</code> 并打 <code class="inline">move_unconfirmed</code> 标记，不假装成功。</p>
+<h2 id="sec-57">8. 一致性自愈</h2>
+<p>三类自愈任务，全部限定范围，禁止全盘扫描：</p>
+<div class="table-wrap"><table><thead><tr><th>任务</th><th>触发</th><th>范围</th><th>频率</th></tr></thead><tbody><tr><td>子树重建</td><td>watcher 溢出</td><td>溢出事件给出的子树根</td><td>事件驱动</td></tr><tr><td>存在性抽查</td><td>定时</td><td>最近 24h 变更过的 object</td><td>6h</td></tr><tr><td>孤儿快照清理</td><td>定时</td><td><code class="inline">snapshots</code> 中 object 已 gone 超过保留窗口</td><td>24h</td></tr></tbody></table></div>
+<p>子树重建的分批策略：以子目录为单位提交，单批 ≤200 条。重建期间该子树在 <code class="inline">files</code> 上打 <code class="inline">status=2(stale)</code>，<code class="inline">ReadDir</code> 对 stale 条目仍返回旧值（可用性优先于瞬时准确性），最后一批提交时清除标记。这样避免&quot;重建一半目录突然空了&quot;的体验。</p>
+<h2 id="sec-58">9. 迁移与版本</h2>
+<ul><li>迁移脚本以 <code class="inline">internal/index/migrations/0001_init.sql</code> 形式 <code class="inline">embed</code> 进二进制</li><li><code class="inline">schema_meta.schema_version</code> 单调递增，启动时比对，只允许前滚</li><li>迁移在单个事务内执行；失败则整体回滚并拒绝启动（不做部分迁移）</li><li>破坏性变更（删列、改类型）必须新建表 + 复制 + 重命名，SQLite 的 <code class="inline">ALTER TABLE</code> 能力有限</li></ul>
+<h2 id="sec-59">10. 容量估算</h2>
+<p>以 20 万个文件、平均路径 60 字符估算：</p>
+<ul><li><code class="inline">files</code>：约 60 MiB（含两个唯一索引）</li><li><code class="inline">versions</code>：按每月 5 万次内容变更计，每年 60 万行，约 60 MiB</li><li><code class="inline">path_history</code>：按每月 1 万次移动计，5 年约 60 万行，约 50 MiB</li></ul>
+<p>结论：单文件 SQLite 在五年量级内不需要分库。若超过 50 万文件，再考虑按共享分库或按年归档 <code class="inline">versions</code>。</p></section>
+<section class="card"><h2 class="doc-title" id="doc-03">03 任务拆解与验收</h2>
+<p>本文把设计切成可独立验收的施工单元。每个任务都有明确的交付物、依赖和<strong>可执行</strong>的验收命令，不接受&quot;看起来能跑&quot;。</p>
+<p>复杂度：S（半天内，单一文件级改动）/ M（跨 2–4 个包）/ L（跨模块，需要设计对齐）。 不使用工期估算，只标依赖顺序与并行可能性。</p>
+<h2 id="sec-60">里程碑视图</h2>
+<pre class="code" data-lang=""><code>M0 地基 ──┬─▶ M1 索引内核 ──┬─▶ M2 移动与版本 ──┬─▶ M3 局域网面 ──┬─▶ M5 加固与验收
+          │                 │                   │                 │
+          ├─▶ M4a 外部面 ───┘                   └─▶ M3c 控制台 ───┤
+          └─▶ M4b 快照 ───────────────────────────────────────────┘</code></pre>
+<ul><li>M1 与 M4a 可以并行（都只依赖 M0）</li><li>M2 必须在 M1 之后（依赖事件分类与 object 模型）</li><li>M3 依赖 D-01 已拍板；可以与 M4b 并行</li><li>M3c 控制台依赖 T-34 状态机；前端部分可以在 T-34 之前先用假数据做（见 T-70）</li><li>M5 必须最后做，且必须由非编码者按本文命令逐条执行</li></ul>
+<h2 id="sec-61">M0 工程地基</h2>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-01</td><td>安装 Go 1.22+ windows/amd64，配置 <code class="inline">GOFLAGS=-mod=mod</code>，确认 <code class="inline">go env CGO_ENABLED=0</code></td><td>本机可 <code class="inline">go build ./...</code></td><td>—</td><td>S</td></tr><tr><td>T-02</td><td>初始化 module <code class="inline">fsgw</code>，落 <code class="inline">cmd/fsgw/main.go</code>，只打印版本与 <code class="inline">--help</code></td><td>可执行文件 <code class="inline">fsgw.exe</code></td><td>T-01</td><td>S</td></tr><tr><td>T-03</td><td>配置层：YAML 解析、完整字段校验、错误信息带字段路径</td><td><code class="inline">internal/config</code>，单测覆盖每个非法值</td><td>T-02</td><td>M</td></tr><tr><td>T-04</td><td>日志层：结构化 JSON、滚动（20MiB×5）、审计独立文件</td><td><code class="inline">internal/audit</code></td><td>T-03</td><td>S</td></tr><tr><td>T-05</td><td>SQLite 打开与迁移框架：WAL、<code class="inline">busy_timeout</code>、<code class="inline">embed</code> 迁移、前滚校验</td><td><code class="inline">internal/index/migrate.go</code> + <code class="inline">migrations/0001_init.sql</code></td><td>T-02</td><td>M</td></tr><tr><td>T-06</td><td>平台抽象骨架：四个接口 + Windows 空实现 + Linux 空实现，保证双平台可编译</td><td><code class="inline">internal/platform/*</code></td><td>T-02</td><td>M</td></tr><tr><td>T-07</td><td>状态文件 <code class="inline">state.json</code> 读写（<code class="inline">desired_state</code> / <code class="inline">applied_state</code> / <code class="inline">last_error</code>）</td><td><code class="inline">internal/app/state.go</code></td><td>T-03</td><td>S</td></tr><tr><td>T-08</td><td>验收夹具：<code class="inline">testdata/</code> 下生成固定目录树（含中文名、长路径、深嵌套、空目录、大文件、软链接）</td><td><code class="inline">tools/mkfixture.js</code> 或 Go 测试辅助</td><td>T-01</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-05 验收</strong></p>
+<pre class="code" data-lang=""><code>go test ./internal/index -run TestMigrate
+# 断言：空库迁移后 schema_version=1；重复执行幂等；伪造 v99 时拒绝启动</code></pre>
+<p><strong>T-08 验收</strong></p>
+<pre class="code" data-lang=""><code>go run ./tools/mkfixture -root D:\fsgw\testdata\fixture
+dir /s /b D:\fsgw\testdata\fixture | find /c /v &quot;&quot;
+# 期望：≥ 200 个条目，包含 2 个超过 240 字符的路径，1 个中文目录，1 个软链接</code></pre>
+<h2 id="sec-62">M1 索引内核</h2>
+<p>这个里程碑的产出决定整个系统是否可信。所有验收都以&quot;库与盘一致&quot;为核心断言。</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-10</td><td>DAO 层：<code class="inline">files</code> / <code class="inline">objects</code> / <code class="inline">share_dirs</code> 的读写与覆盖索引查询</td><td><code class="inline">internal/index/dao_*.go</code></td><td>T-05</td><td>M</td></tr><tr><td>T-11</td><td>单写队列：双通道、结构性优先、批合并、深度指标</td><td><code class="inline">internal/index/writer.go</code></td><td>T-10</td><td>M</td></tr><tr><td>T-12</td><td>读连接池：8 条，<code class="inline">query_only=1</code>，错误分类</td><td><code class="inline">internal/index/reader.go</code></td><td>T-10</td><td>S</td></tr><tr><td>T-13</td><td><code class="inline">fileid</code> Windows 实现：128 位 FileID + 卷序列号，退化路径打 <code class="inline">v1:</code> 前缀</td><td><code class="inline">internal/platform/fileid_windows.go</code></td><td>T-06</td><td>M</td></tr><tr><td>T-14</td><td><code class="inline">watcher</code> Windows 实现：<code class="inline">ReadDirectoryChangesW</code> 递归、64KiB 缓冲、溢出上报</td><td><code class="inline">internal/platform/watcher_windows.go</code></td><td>T-06</td><td>L</td></tr><tr><td>T-15</td><td>事件分类：suppress 命中判定、SMB/local 来源归类、结构性 vs 内容性分流</td><td><code class="inline">internal/index/classify.go</code></td><td>T-11, T-13</td><td>M</td></tr><tr><td>T-16</td><td>防抖与合并：结构性 150ms、内容 400ms、写入中续期</td><td><code class="inline">internal/index/debounce.go</code></td><td>T-15</td><td>M</td></tr><tr><td>T-17</td><td>首次全量对齐：共享根递归建索引，分批提交，进度上报</td><td><code class="inline">internal/index/initial.go</code></td><td>T-10</td><td>M</td></tr><tr><td>T-18</td><td>子树重建：溢出驱动、深度与节点上限、stale 标记</td><td><code class="inline">internal/index/reconcile.go</code></td><td>T-10, T-14</td><td>L</td></tr><tr><td>T-19</td><td>存在性抽查任务：6h 周期，最近 24h 变更范围</td><td><code class="inline">internal/index/verify.go</code></td><td>T-10</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-13 验收</strong></p>
+<pre class="code" data-lang=""><code>go test ./internal/platform -run TestFileIDWindows
+# 断言：同一文件两次取 ID 相同；硬链接两个路径取到同一 ID；
+#       重命名后 ID 不变；目录 ID 可正常取到；软链接取到链接本身而非目标</code></pre>
+<p><strong>T-14 验收</strong></p>
+<pre class="code" data-lang=""><code>go test ./internal/platform -run TestWatcherRecursive
+# 子目录内创建文件 → 收到 Create；改内容 → 收到 Write；
+# 重命名 → 收到 OLD_NAME 紧跟 NEW_NAME；
+# 一次性创建 5000 个文件 → 要么全部事件到达，要么 Overflow() 收到对应子树根</code></pre>
+<p><strong>T-17 验收</strong></p>
+<pre class="code" data-lang=""><code>go run ./cmd/fsgw index build --share main
+sqlite3 data\fsgw.db &quot;SELECT COUNT(*) FROM files;&quot;
+# 与下面结果一致（允许 ±0）：
+powershell -c &quot;(Get-ChildItem D:\share -Recurse -Force | Measure-Object).Count&quot;
+# 且耗时打印中不含任何 ReadFile 调用（大文件不读内容）</code></pre>
+<p><strong>T-18 验收</strong></p>
+<pre class="code" data-lang=""><code>go run ./cmd/fsgw debug overflow --dir D:\share\testdata\子目录
+sqlite3 data\fsgw.db &quot;SELECT reason, nodes_seen, inserted, deleted FROM reconcile_log ORDER BY id DESC LIMIT 1;&quot;
+# 断言：reason='overflow'，deleted 数量与手工删除数一致，且全程无全盘遍历日志</code></pre>
+<h2 id="sec-63">M2 移动语义与版本</h2>
+<p>核心断言只有一句：<strong>移动不产生版本</strong>。</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-20</td><td><code class="inline">pending_moves</code> 配对状态机：写入、配对、超时定性（每 2s 扫，阈值 500ms）</td><td><code class="inline">internal/index/moves.go</code></td><td>T-16</td><td>L</td></tr><tr><td>T-21</td><td>移动事务：路径更新 + <code class="inline">path_history</code> 追加 + 目录级联，<code class="inline">versions</code> 零写入</td><td>同上</td><td>T-20</td><td>M</td></tr><tr><td>T-22</td><td>跨卷移动：哈希 + 大小 + 时间窗口匹配，成功迁 <code class="inline">object_id</code>，失败记 <code class="inline">move_unconfirmed</code></td><td><code class="inline">internal/index/moves_cross.go</code></td><td>T-21</td><td>M</td></tr><tr><td>T-23</td><td>版本链追加：内容变更时 <code class="inline">seq=max+1</code>，<code class="inline">change</code> 分类正确</td><td><code class="inline">internal/index/versions.go</code></td><td>T-11</td><td>M</td></tr><tr><td>T-24</td><td>哈希计算与去重：<code class="inline">sha256</code>、超限跳过、异步队列</td><td><code class="inline">internal/index/hash.go</code></td><td>T-23</td><td>M</td></tr><tr><td>T-25</td><td>旧路径重定向查询：按 <code class="inline">from_path</code> 返回最新 <code class="inline">to_path</code></td><td><code class="inline">internal/index/redirect.go</code></td><td>T-21</td><td>S</td></tr><tr><td>T-26</td><td>删除语义：<code class="inline">status=3</code>、<code class="inline">objects.state=frozen</code>、冻结版本链、保留窗口</td><td><code class="inline">internal/index/delete.go</code></td><td>T-23</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-21 验收（最关键的一条）</strong></p>
+<pre class="code" data-lang=""><code># 1. 记录基线
+sqlite3 data\fsgw.db &quot;SELECT COUNT(*) FROM versions;&quot;  → N0
+# 2. 清理整理：移动 200 个文件到新目录、重命名 50 个、建 10 个新目录
+# 3. 等待 3 秒后复查
+sqlite3 data\fsgw.db &quot;SELECT COUNT(*) FROM versions;&quot;  → N1
+sqlite3 data\fsgw.db &quot;SELECT COUNT(*) FROM path_history WHERE change=2;&quot;  → 250
+# 断言：N1 == N0（移动零版本）；path_history 恰好 250 条 move
+# 断言：所有被移动文件 object_id 与移动前一致
+sqlite3 data\fsgw.db &quot;SELECT object_id, path FROM files WHERE path_key LIKE '%新目录%' LIMIT 5;&quot;</code></pre>
+<p><strong>T-22 验收</strong></p>
+<pre class="code" data-lang=""><code># 在 D:\ 建第二个共享根，把文件从 D:\share 移到 D:\share2（同卷不同根）
+# 再把 D:\share2 建到另一块物理盘，重复一次
+# 断言：同卷根间移动 object_id 不变，move_kind=1
+# 断言：跨盘移动若哈希匹配成功 → move_kind=2 且 object_id 不变
+# 断言：跨盘且内容已改 → move_kind=3 且存在 move_unconfirmed 标记，不做错误合并</code></pre>
+<p><strong>T-26 验收</strong></p>
+<pre class="code" data-lang=""><code>sqlite3 data\fsgw.db &quot;SELECT status FROM files WHERE path_key='x/y.txt';&quot;  → 3
+sqlite3 data\fsgw.db &quot;SELECT state FROM objects WHERE object_id=(...);&quot;      → 2
+# 断言：文件已从 ReadDir 结果消失，但 versions 记录仍可查</code></pre>
+<h2 id="sec-64">M3 局域网面</h2>
+<p>前置：D-01 与 D-03 已拍板。</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-30</td><td><code class="inline">smbhost</code> 接口 + <code class="inline">hosted</code> 实现：<code class="inline">net share</code> 幂等创建、删除、状态查询</td><td><code class="inline">internal/smbhost/hosted.go</code></td><td>T-06</td><td>M</td></tr><tr><td>T-31</td><td>系统策略编排：禁 SMBv1、Guest/NULL 会话配置、<code class="inline">AllowInsecureGuestAuth</code> 检测与提示</td><td><code class="inline">internal/smbhost/policy.go</code></td><td>T-30</td><td>M</td></tr><tr><td>T-32</td><td>匿名与账户并存：建 <code class="inline">fsgw</code> 本地账户、共享授权、口令写入说明页</td><td><code class="inline">internal/smbhost/account.go</code></td><td>T-31</td><td>M</td></tr><tr><td>T-33</td><td><code class="inline">firewall</code> Windows 实现：<code class="inline">netsh</code> 幂等增删、<code class="inline">FSGW-</code> 前缀、localsubnet 限制</td><td><code class="inline">internal/platform/firewall_windows.go</code></td><td>T-06</td><td>M</td></tr><tr><td>T-34</td><td>开关状态机：四状态、转换顺序、失败回滚、崩溃恢复按 OFF</td><td><code class="inline">internal/app/switch.go</code></td><td>T-07, T-33</td><td>L</td></tr><tr><td>T-35</td><td>控制面 HTTP API：回环 8444、token 鉴权、Origin/Host 校验、SSE 推送、长任务 operation</td><td><code class="inline">internal/ctlapi</code>（详见 M3c）</td><td>T-34</td><td>L</td></tr><tr><td>T-36</td><td><code class="inline">serve</code> 子命令在 <code class="inline">writing</code> 状态下让 SMB 可见（与 T-23 联动）</td><td><code class="inline">internal/index/dao_files.go</code></td><td>T-23</td><td>S</td></tr><tr><td>T-37</td><td>DLNA：SSDP 发现 + 最小 ContentDirectory（只 Browse）+ 媒体类型白名单</td><td><code class="inline">internal/dlna</code></td><td>D-08, T-10</td><td>L</td></tr><tr><td>T-38</td><td>电视/手机实测清单与结果记录（小米电视、安卓文件管理器、iOS 文件 App）</td><td><code class="inline">testdata/compat-matrix.md</code></td><td>T-30, T-37</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-30 验收</strong></p>
+<pre class="code" data-lang=""><code>net share
+# 断言：存在名为 share 的共享，Path=D:\share
+go run ./cmd/fsgw smb ensure
+net share share
+# 断言：幂等，重复执行不报错、不重建
+go run ./cmd/fsgw smb remove
+net share
+# 断言：只删除了 share，用户其它共享（若有）原样保留</code></pre>
+<p><strong>T-33 验收</strong></p>
+<pre class="code" data-lang=""><code>go run ./cmd/fsgw firewall apply --state LAN
+netsh advfirewall firewall show rule name=&quot;FSGW-SMB-445&quot;
+netsh advfirewall firewall show rule name=&quot;FSGW-DLNA-1900&quot;
+# 断言：两条规则存在，RemoteIP=LocalSubnet，Profile=Private
+go run ./cmd/fsgw firewall clear
+netsh advfirewall firewall show rule name=&quot;FSGW-SMB-445&quot;
+# 断言：规则不存在</code></pre>
+<p><strong>T-34 验收（关闭即安全）</strong></p>
+<pre class="code" data-lang=""><code>go run ./cmd/fsgw on --state ALL
+netstat -ano | findstr &quot;:445 &quot;     → 有监听
+netstat -ano | findstr &quot;:8443 &quot;    → 有监听
+go run ./cmd/fsgw off
+netstat -ano | findstr &quot;:445 &quot;     → 无输出
+netstat -ano | findstr &quot;:8443 &quot;    → 无输出
+netstat -ano | findstr &quot;:1900 &quot;    → 无输出
+netsh advfirewall firewall show rule name=all | findstr FSGW   → 无输出
+type data\state.json                → applied_state = &quot;OFF&quot;
+# 异常注入：apply 到一半杀掉进程，重启后断言 applied_state=OFF 且无残留监听</code></pre>
+<p><strong>T-37 验收</strong></p>
+<pre class="code" data-lang=""><code># 电视端：系统媒体播放器 → 应自动发现&quot;家庭共享&quot;
+# 断言：只看到媒体目录，看不到 private（writable=false 的非媒体目录）
+# 断言：用 HTTP 直连 http://&lt;IP&gt;:8200/ 不应返回目录列表页</code></pre>
+<h2 id="sec-65">M3c 控制台（前端 HTML + 后端 Go）</h2>
+<p>设计见 <code class="inline">01</code> 第 11 节。前端零依赖、零构建步骤，后端只用标准库。这个里程碑的最大风险不是技术，而是<strong>把安全校验写在前端</strong>——所有校验必须在 Go 侧。</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-70</td><td>信息架构定稿：用假数据做出静态原型，确认五个区块的取舍与排列</td><td><code class="inline">docs/控制台原型.html</code>（已有草稿）</td><td>—</td><td>S</td></tr><tr><td>T-71</td><td><code class="inline">ctlapi</code> 骨架：<code class="inline">ServeMux</code>、token 中间件、Origin/Host 校验、统一错误码、审计埋点</td><td><code class="inline">internal/ctlapi/server.go</code></td><td>T-34</td><td>M</td></tr><tr><td>T-72</td><td>只读接口：<code class="inline">/api/status</code>、<code class="inline">/api/config</code>（脱敏）、<code class="inline">/api/audit</code>、<code class="inline">/api/diagnose</code></td><td><code class="inline">internal/ctlapi/read.go</code></td><td>T-71</td><td>M</td></tr><tr><td>T-73</td><td>变更接口：<code class="inline">/api/switch</code>（长任务 + operation）、<code class="inline">/api/shares</code>、配置 PUT（临时文件 + rename 原子写）</td><td><code class="inline">internal/ctlapi/write.go</code></td><td>T-72</td><td>L</td></tr><tr><td>T-74</td><td>SSE <code class="inline">/api/events</code> + <code class="inline">embed.FS</code> 静态托管 + 前端骨架（状态卡、四态开关、事件订阅）</td><td><code class="inline">internal/webui/</code>、<code class="inline">index.html</code></td><td>T-71</td><td>M</td></tr><tr><td>T-75</td><td>目录浏览 <code class="inline">/api/fs/list</code>：只回子目录、限盘符根与共享根、复用 <code class="inline">internal/vfs</code></td><td><code class="inline">internal/ctlapi/fsbrowse.go</code></td><td>T-40, T-72</td><td>M</td></tr><tr><td>T-76</td><td>前端各区块落地：服务面卡（含连接串一键复制）、共享目录增删、索引与快照（手写 SVG sparkline）、诊断与审计筛选</td><td><code class="inline">internal/webui/app.js</code></td><td>T-74, T-73</td><td>L</td></tr><tr><td>T-77</td><td><code class="inline">fsgw ui</code> 生成带 token 地址并开浏览器；CLI 的 <code class="inline">on/off/status</code> 改调同一 HTTP API，删掉独立控制通道</td><td><code class="inline">cmd/fsgw/ui.go</code></td><td>T-71</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-71 验收（安全是主断言，不是附注）</strong></p>
+<pre class="code" data-lang=""><code>TOKEN=$(cat data\control.token)
+
+# 无 token
+curl -i http://127.0.0.1:8444/api/status
+# 断言：401，响应体不含任何状态字段
+
+# 错误 token
+curl -i -H &quot;X-FSGW-Token: bad&quot; http://127.0.0.1:8444/api/status
+# 断言：401
+
+# 正确 token
+curl -s -H &quot;X-FSGW-Token: $TOKEN&quot; http://127.0.0.1:8444/api/status
+# 断言：200，applied_state 字段存在
+
+# 模拟浏览器里的第三方页面发起请求
+curl -i -H &quot;X-FSGW-Token: $TOKEN&quot; -H &quot;Origin: http://evil.example&quot; http://127.0.0.1:8444/api/status
+# 断言：403
+
+# 模拟 DNS rebinding：Host 已被换成攻击者域名
+curl -i -H &quot;X-FSGW-Token: $TOKEN&quot; -H &quot;Host: evil.example:8444&quot; http://127.0.0.1:8444/api/status
+# 断言：403
+
+# 预检请求必须不被放行
+curl -i -X OPTIONS -H &quot;Origin: http://evil.example&quot; \
+     -H &quot;Access-Control-Request-Method: POST&quot; http://127.0.0.1:8444/api/switch
+# 断言：响应里没有 Access-Control-Allow-Origin / -Methods / -Headers
+
+# 绑定地址不可改
+# 配置 ui.bind: 0.0.0.0:8444 后启动
+# 断言：启动失败并明确指出只允许回环地址</code></pre>
+<p><strong>T-73 验收</strong></p>
+<pre class="code" data-lang=""><code># 开启是长任务，必须立即返回，不能同步阻塞
+curl -s -X POST -H &quot;X-FSGW-Token: $TOKEN&quot; -H &quot;Content-Type: application/json&quot; \
+     -d '{&quot;state&quot;:&quot;LAN&quot;,&quot;confirm&quot;:&quot;LAN&quot;}' http://127.0.0.1:8444/api/switch
+# 断言：202 + operation_id
+
+curl -s -H &quot;X-FSGW-Token: $TOKEN&quot; http://127.0.0.1:8444/api/operations/&lt;id&gt;
+# 断言：stage 依次为 firewall → listener → selfcheck → done
+
+# 缺 confirm 字段
+curl -i -X POST -H &quot;X-FSGW-Token: $TOKEN&quot; -d '{&quot;state&quot;:&quot;ALL&quot;}' http://127.0.0.1:8444/api/switch
+# 断言：400，且 applied_state 未变
+
+# 失败路径：先手工占用 8443 再开 WAN
+# 断言：operation 失败，stage=listener，applied_state 回落 OFF，防火墙无残留规则</code></pre>
+<p><strong>T-75 验收</strong></p>
+<pre class="code" data-lang=""><code>curl -s -H &quot;X-FSGW-Token: $TOKEN&quot; &quot;http://127.0.0.1:8444/api/fs/list?path=D:\\&quot;
+# 断言：entries 里只有 is_dir=true 的项，无文件名、无大小
+
+curl -i -H &quot;X-FSGW-Token: $TOKEN&quot; &quot;http://127.0.0.1:8444/api/fs/list?path=D:\\share\\..\\Windows&quot;
+# 断言：400
+
+curl -i -H &quot;X-FSGW-Token: $TOKEN&quot; &quot;http://127.0.0.1:8444/api/fs/list?path=\\\\host\\share&quot;
+# 断言：400（拒绝 UNC）
+
+curl -i -H &quot;X-FSGW-Token: $TOKEN&quot; &quot;http://127.0.0.1:8444/api/fs/list?path=C:\\Users\\yanji&quot;
+# 断言：400（不在盘符根也不在共享根内）</code></pre>
+<p><strong>T-74 / T-76 验收</strong></p>
+<pre class="code" data-lang=""><code># 浏览器：http://127.0.0.1:8444/#&lt;token&gt;
+# 断言：Network 面板中不存在除 127.0.0.1:8444 之外的任何请求（无 CDN、无外链字体）
+# 断言：断网后刷新页面，布局与交互仍完整
+# 断言：开启 LAN 期间不刷新页面，状态徽标在 3 秒内自动变为 LAN（SSE 生效）
+# 断言：把浏览器窗口缩到 900px 以下，五块卡片单列排布不变形
+# 断言：点击&quot;开启 WAN&quot;先出现二次确认，未确认前不发出任何请求</code></pre>
+<h2 id="sec-66">M4a 外部只读面</h2>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-40</td><td>VFS 核心：规范化、白名单最长前缀、穿越防护、非法字符拒绝</td><td><code class="inline">internal/vfs</code></td><td>T-10</td><td>L</td></tr><tr><td>T-41</td><td>WebDAV handler：方法白名单、<code class="inline">GET</code>/<code class="inline">HEAD</code>/<code class="inline">PROPFIND</code>/<code class="inline">OPTIONS</code> 实现</td><td><code class="inline">internal/webdav</code></td><td>T-40</td><td>M</td></tr><tr><td>T-42</td><td><code class="inline">PROPFIND</code> 走索引；<code class="inline">GET</code> 先查库再回源；<code class="inline">Range</code> 与 <code class="inline">ETag</code></td><td>同上</td><td>T-41</td><td>M</td></tr><tr><td>T-43</td><td>Basic 认证 + bcrypt + 失败限速（5 次锁 10 分钟）</td><td><code class="inline">internal/webdav/auth.go</code></td><td>T-41</td><td>S</td></tr><tr><td>T-44</td><td><code class="inline">/versions</code> 历史视图（依赖 T-50 才有内容，先返回 501 占位）</td><td><code class="inline">internal/webdav/versions.go</code></td><td>T-41</td><td>S</td></tr><tr><td>T-45</td><td><code class="inline">GET /healthz</code>、<code class="inline">GET /metrics</code>（仅回环）</td><td><code class="inline">internal/app/obs.go</code></td><td>T-34</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-40 验收</strong></p>
+<pre class="code" data-lang=""><code>go test ./internal/vfs -run TestEscape
+# 断言以下全部被拒绝且记审计：
+#   ..\..\windows\system32\cmd.exe
+#   /etc/passwd 形式绝对路径
+#   D:\share\..\secret
+#   file.txt:stream  （ADS）
+#   CON、NUL、COM1
+#   解析后跳出共享根的符号链接
+# 断言：中文名、超过 240 字符的长路径、末尾空格（应拒绝而非静默截断）</code></pre>
+<p><strong>T-41 验收</strong></p>
+<pre class="code" data-lang=""><code>curl -u user:pass -X PROPFIND http://127.0.0.1:8443/share/ -H &quot;Depth: 1&quot; -o out.xml -w &quot;%{http_code}&quot;
+# 断言：207
+curl -u user:pass -X PUT --data &quot;x&quot; http://127.0.0.1:8443/share/a.txt -w &quot;%{http_code}&quot;
+# 断言：405，且磁盘上不存在 a.txt
+curl -u user:pass -X DELETE http://127.0.0.1:8443/share/a.txt -w &quot;%{http_code}&quot;
+# 断言：405，且文件仍在
+curl -u user:pass -r 0-99 http://127.0.0.1:8443/share/big.bin -o part.bin -w &quot;%{http_code}&quot;
+# 断言：206，part.bin 为 100 字节</code></pre>
+<h2 id="sec-67">M4b 快照</h2>
+<p>前置：D-02 已拍板。</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-50</td><td>快照捕获：网关写前登记 + 同卷硬链接 / 跨卷复制，<code class="inline">integrity</code> 标记</td><td><code class="inline">internal/snapshot/capture.go</code></td><td>T-24, T-42</td><td>L</td></tr><tr><td>T-51</td><td>SMB 来源 best-effort 捕获：首个 Write 事件抓取，标 <code class="inline">partial</code></td><td><code class="inline">internal/snapshot/besteffort.go</code></td><td>T-50, T-15</td><td>M</td></tr><tr><td>T-52</td><td>内容去重：同 <code class="inline">content_hash</code> 复用 <code class="inline">rel_path</code></td><td><code class="inline">internal/snapshot/dedup.go</code></td><td>T-50</td><td>M</td></tr><tr><td>T-53</td><td>清理器：空间阈值、时间梯度、每文件上限、总配额</td><td><code class="inline">internal/snapshot/gc.go</code></td><td>T-50</td><td>M</td></tr><tr><td>T-54</td><td><code class="inline">/versions</code> 落地：列表 + 下载 + <code class="inline">partial</code> 角标</td><td><code class="inline">internal/webdav/versions.go</code></td><td>T-44, T-50</td><td>M</td></tr><tr><td>T-55</td><td><code class="inline">fsgw restore &lt;path&gt; --at &lt;time&gt;</code>：从快照恢复到新路径，不覆盖现有文件</td><td><code class="inline">internal/snapshot/restore.go</code></td><td>T-50</td><td>M</td></tr><tr><td>T-56</td><td>（可选）VSS 卷影：检测可用性、创建、挂载读取、清理</td><td><code class="inline">internal/snapshot/vss.go</code></td><td>D-02</td><td>L</td></tr></tbody></table></div>
+<p><strong>T-50 验收</strong></p>
+<pre class="code" data-lang=""><code># 1. 网关路径写入：通过 WebDAV 不可写，改用内置 `fsgw put` 调试命令写 v1
+# 2. 再覆盖为 v2
+# 3. 断言：/versions 能下载到 v1，内容哈希与写入前一致，integrity=complete
+sqlite3 data\fsgw.db &quot;SELECT storage, integrity, size FROM snapshots;&quot;
+# 4. 同卷断言：storage='link'，且快照区不占额外空间（体积对比）</code></pre>
+<p><strong>T-51 验收（必须如实标注）</strong></p>
+<pre class="code" data-lang=""><code># 用 SMB 客户端覆盖一个 500 MB 视频
+sqlite3 data\fsgw.db &quot;SELECT integrity FROM snapshots ORDER BY created_at DESC LIMIT 1;&quot;
+# 断言：integrity=1(partial)，且 /versions 页面显示&quot;可能不完整&quot;
+# 用 SMB 客户端覆盖一个 2 KB 文本
+# 断言：若捕获成功但内容已是新内容，必须标 partial，禁止标 complete</code></pre>
+<p><strong>T-53 验收</strong></p>
+<pre class="code" data-lang=""><code># 构造 100 个旧版本，配置 quota_gb 极小
+go run ./cmd/fsgw snapshot gc
+# 断言：总占用降到配额以下；最新版本一个都没删；pinned 快照一个都没删
+# 构造可用空间 &lt; min_free_gb 的场景
+# 断言：触发告警，且清理后当前活动文件仍在</code></pre>
+<h2 id="sec-68">M5 加固与验收</h2>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>任务</th><th>交付物</th><th>依赖</th><th>复杂度</th></tr></thead><tbody><tr><td>T-60</td><td>Windows 服务封装：<code class="inline">svc</code> 集成、开机自启、异常退出重启策略</td><td><code class="inline">internal/platform/service_windows.go</code></td><td>T-34</td><td>M</td></tr><tr><td>T-61</td><td>审计完整性：所有写操作与所有拒绝操作入审计，字段齐全</td><td><code class="inline">internal/audit</code></td><td>T-40</td><td>M</td></tr><tr><td>T-62</td><td>性能基线：1 万条目录列举、5000 事件洪峰、20 万文件索引构建</td><td><code class="inline">testdata/perf.md</code> + 脚本</td><td>M1, M4a</td><td>M</td></tr><tr><td>T-63</td><td>故障演练：进程崩溃、断电模拟、磁盘满、卷被拔出</td><td><code class="inline">testdata/drill.md</code></td><td>M2, M4b</td><td>M</td></tr><tr><td>T-64</td><td>全量验收脚本：把本文所有断言串成一条命令</td><td><code class="inline">tools/accept.ps1</code></td><td>全部</td><td>M</td></tr><tr><td>T-65</td><td>运维手册：一页说清&quot;电视怎么连、手机怎么连、外网怎么开、误删怎么恢复&quot;</td><td><code class="inline">docs/05-运维手册.md</code></td><td>全部</td><td>S</td></tr></tbody></table></div>
+<p><strong>T-62 目标值</strong>（先记录，不达标就按 D-07 的退路上版本号缓存）</p>
+<div class="table-wrap"><table><thead><tr><th>场景</th><th>目标</th></tr></thead><tbody><tr><td>1 万条目单目录 <code class="inline">ReadDir</code></td><td>p50 &lt; 20ms，p99 &lt; 50ms</td></tr><tr><td>5000 个文件洪峰后索引追平</td><td>&lt; 10s</td></tr><tr><td>20 万文件首次建索引</td><td>不读文件内容，只读元数据</td></tr><tr><td>移动 200 文件期间结构性写延迟</td><td>p99 &lt; 50ms</td></tr></tbody></table></div>
+<p><strong>T-64 交付形态</strong></p>
+<pre class="code" data-lang="powershell"><code># 一条命令跑完全部验收，输出通过/失败清单
+.\tools\accept.ps1 -ShareRoot D:\share -Fail2Json accept-report.json
+# 断言：accept-report.json 中 passed 数量 = 本文档中所有「验收」小节声明的断言数</code></pre>
+<h2 id="sec-69">完成定义（DoD）</h2>
+<p>一个任务只有同时满足以下五条才算完成：</p>
+<ol><li>代码合并，<code class="inline">go build ./...</code> 与 <code class="inline">go vet ./...</code> 无输出</li><li>该任务的验收命令在干净环境（删掉 <code class="inline">data\</code> 重来）可重复通过</li><li>新增的写路径有对应审计记录</li><li>新增的失败分支有日志，且日志里能定位到具体路径</li><li>若改动了 <code class="inline">02</code> 中的表结构或事务顺序，<code class="inline">02</code> 已同步更新</li></ol>
+<p>涉及控制台的额外两条：</p>
+<ol><li>前端不得内联任何业务校验逻辑，只做展示与输入收集；删掉前端的 <code class="inline">app.js</code> 后，所有约束仍由后端独立成立</li><li>新增的 API 必须在 <code class="inline">01</code> 第 11.3 节表格中登记，不接受&quot;临时接口&quot;</li></ol>
+<h2 id="sec-70">建议的推进顺序（含并行）</h2>
+<div class="table-wrap"><table><thead><tr><th>阶段</th><th>串行主线</th><th>可并行</th></tr></thead><tbody><tr><td>第一段</td><td>T-01 → T-02 → T-05 → T-10</td><td>T-03、T-04、T-06、T-08、T-70</td></tr><tr><td>第二段</td><td>T-11 → T-15 → T-16 → T-20 → T-21</td><td>T-13、T-14、T-17、T-40</td></tr><tr><td>第三段</td><td>T-21 → T-23 → T-30 → T-34</td><td>T-37、T-41、T-50</td></tr><tr><td>第四段</td><td>T-34 → T-71 → T-74 → T-76</td><td>T-33、T-72、T-73、T-75、T-51、T-53</td></tr><tr><td>第五段</td><td>T-77 → T-60 → T-64</td><td>T-62、T-63、T-65</td></tr></tbody></table></div>
+<p><code class="inline">T-14</code>（watcher）与 <code class="inline">T-40</code>（VFS）是两个风险最高的任务，建议安排人专门啃，不要与主线抢时间。</p>
+<p><code class="inline">T-70</code> 排在最早是因为它不依赖任何代码——先让界面定型，后面的 API 就知道该返回什么字段，避免&quot;先写接口再猜界面&quot;的返工。</p></section>
+<section class="card"><h2 class="doc-title" id="doc-04">04 决策点与风险登记</h2>
+<p>评审时逐条过。每条给出备选、代价、推荐，以及&quot;如果不决策会怎样&quot;。</p>
+<hr class="rule">
+<h2 id="sec-71">D-01 SMB 实现路线：托管系统共享，还是自研协议栈</h2>
+<h3 id="sec-72">事实前提</h3>
+<p>纯 Go 生态里没有可用于生产环境的 SMB2/3 <strong>服务端</strong>实现。开源库绝大多数是客户端。服务端要正确处理 credit 授予、compound request、signing、encryption、lease/oplocks、durable handle、change notify、DFS 引用、IPC 命名管道等子协议，任何一项缺失都会让某类客户端连不上或行为异常。这是方案里唯一一个&quot;看起来是技术选型、实际是可行性问题&quot;的点。</p>
+<h3 id="sec-73">备选</h3>
+<div class="table-wrap"><table><thead><tr><th>选项</th><th>做法</th><th>得到什么</th><th>失去什么</th></tr></thead><tbody><tr><td>A（推荐）</td><td>托管 Windows 原生 SMB 共享，网关负责创建、配置、开关、索引</td><td>电视与手机兼容性最好，零协议开发，稳定性等同系统</td><td>网关不在写路径上，写前捕获做不了；匿名受系统策略约束</td></tr><tr><td>B</td><td>自研 SMB2/3 服务端</td><td>唯一能同时拿到写前捕获与精细 VFS 控制</td><td>协议栈体量巨大，兼容性回归风险高，第一版几乎不可能稳定</td></tr><tr><td>C</td><td>局域网写面改用 WebDAV</td><td>实现成本最低，能与外部面复用代码</td><td>破坏&quot;零安装&quot;，安卓电视与手机文件管理器体验极差</td></tr><tr><td>D</td><td>A + VSS 卷影兜底</td><td>保留 A 的兼容性，内容级历史由卷影提供</td><td>时间粒度粗（分钟级），需要卷影权限与额外空间</td></tr></tbody></table></div>
+<h3 id="sec-74">推荐</h3>
+<p><strong>第一版选 A，并把 <code class="inline">smbhost</code> 设计成可替换接口</strong>：</p>
+<pre class="code" data-lang="go"><code>type Provider interface {
+    EnsureShare(spec ShareSpec) error   // 幂等创建/更新
+    RemoveShare(name string) error
+    Status(name string) (ShareStatus, error)
+}</code></pre>
+<p>两个实现：<code class="inline">hosted</code>（A，第一版）、<code class="inline">native</code>（B，v2 实验分支）。上层与协议无关，切换不动业务代码。</p>
+<p>如果后续确认&quot;必须写前捕获&quot;，先评估 D，再评估 B。不要因为&quot;方案里写了网关当 SMB 服务端&quot;就硬上 B。</p>
+<h3 id="sec-75">不决策的后果</h3>
+<p>M3 阶段会卡住，因为 <code class="inline">smbhost</code> 的接口形状取决于这个选择。</p>
+<hr class="rule">
+<h2 id="sec-76">D-02 内容快照的承诺边界</h2>
+<h3 id="sec-77">事实前提</h3>
+<p>用户已确认&quot;整个共享可读写&quot;。但 SMB 走系统共享意味着删除与覆盖都由系统内核完成，网关拿不到任何前置钩子。硬链接保旧 inode 的技巧在就地覆盖场景完全失效（见 <code class="inline">02</code> 第 6.1 节）。</p>
+<p>因此实际能承诺的只有：</p>
+<ul><li>索引版本链（元数据）：全部来源，可信</li><li>内容快照：网关自身写路径可信；SMB 来源只能 best-effort</li><li>删除恢复：只有在快照存在时才能恢复，且 SMB 删除是不可拦截的真删</li></ul>
+<h3 id="sec-78">备选</h3>
+<div class="table-wrap"><table><thead><tr><th>选项</th><th>承诺</th><th>代价</th></tr></thead><tbody><tr><td>A</td><td>只做 L0 索引版本链 + L1 网关写路径快照，SMB 来源明确标注&quot;无可靠历史&quot;</td><td>最诚实，但用户预期落差大</td></tr><tr><td>B（推荐）</td><td>A + 可选启用 VSS 定时卷影（默认 15 分钟），对外把卷影时点作为&quot;完整版本&quot;呈现</td><td>需要额外磁盘空间（增量，通常 5–15%），需要管理员权限，恢复粒度受间隔限制</td></tr><tr><td>C</td><td>自研协议栈或 minifilter 实现真写前捕获</td><td>见 D-01 B，第一版不可行</td></tr></tbody></table></div>
+<h3 id="sec-79">推荐</h3>
+<p><strong>选 B</strong>，但把 VSS 做成&quot;可选、默认关闭、显式开启时给出空间提示&quot;。UI 三档标记必须清楚：</p>
+<ul><li><code class="inline">完整</code>：L1/L3 产出</li><li><code class="inline">尽力</code>：L2 产出，可能不完整</li><li><code class="inline">仅元数据</code>：只有 L0</li></ul>
+<h3 id="sec-80">不决策的后果</h3>
+<p><code class="inline">/versions</code> 页面会出现&quot;用户以为能下载三天前的文档，实际下到半个损坏文件&quot;的情况。这比没有历史版本更糟。</p>
+<hr class="rule">
+<h2 id="sec-81">D-03 匿名 SMB 在 Windows 上的真实可行性</h2>
+<h3 id="sec-82">事实前提</h3>
+<p>&quot;局域网零安装&quot;要求匿名访问。但 Windows 10 1903 之后，SMB2/3 的匿名（Guest）访问在<strong>客户端侧</strong>默认被拒绝，需要改注册表：</p>
+<pre class="code" data-lang=""><code>HKLM\SYSTEM\CurrentControlSet\Services\LanmanWorkstation\Parameters
+  AllowInsecureGuestAuth = 1 (DWORD)</code></pre>
+<p>服务端侧还需要：Guest 账户启用、共享授权给 Guest、<code class="inline">NullSessionShares</code> 包含共享名、<code class="inline">RestrictNullSessAccess</code> 允许。</p>
+<p>另外：</p>
+<ul><li>安卓电视/小米电视原生播放器：通常支持匿名 SMB2，可用</li><li>iOS「文件」App：<strong>不支持</strong>匿名，必须账号密码</li><li>Windows 资源管理器：默认隐藏匿名共享，需启用&quot;不安全的来宾登录&quot;</li><li>Windows 默认禁止空密码账户远程登录（<code class="inline">LimitBlankPasswordUse=1</code>），所以账户模式的口令不能为空</li></ul>
+<h3 id="sec-83">推荐</h3>
+<p>配置 <code class="inline">smb.auth: both</code>：</p>
+<ul><li>匿名路径服务电视</li><li>专用低权本地账户 <code class="inline">fsgw</code>（随机口令，写在 <code class="inline">config.yaml</code> 与一页说明里）服务手机与 PC</li></ul>
+<p>首次连接时提示&quot;iOS 需要账号密码&quot;，不要承诺&quot;所有设备都零配置&quot;。</p>
+<h3 id="sec-84">不决策的后果</h3>
+<p>验收时&quot;手机连不上&quot;会被当成 bug 排查很久，实际是客户端策略。</p>
+<hr class="rule">
+<h2 id="sec-85">D-04 整个共享可读写的删除风险</h2>
+<h3 id="sec-86">事实前提</h3>
+<p>用户选择&quot;整个共享可读写&quot;。这意味着任何局域网设备可以删除 <code class="inline">D:\share</code> 下任何文件，网关无法拦截。</p>
+<h3 id="sec-87">可选缓解（不影响已定策略）</h3>
+<ol><li>默认开启 <code class="inline">deny_delete=false</code>，但提供 <code class="inline">fsgw restore &lt;path&gt; [--at &lt;time&gt;]</code> 从快照恢复</li><li>可选 <code class="inline">deny_delete=true</code>：通过共享 ACL 实现只读删除（<code class="inline">Change</code> 权限去掉 <code class="inline">DELETE</code>），代价是客户端删除操作报错而非静默</li><li>每日一次 <code class="inline">snapshots.pinned</code> 快照（不受配额清理），成本可控</li></ol>
+<h3 id="sec-88">推荐</h3>
+<p>保留用户选择（可读写可删除），但<strong>默认启用 1 + 3</strong>，把&quot;误删恢复&quot;做成可用功能而不是事后解释。</p>
+<hr class="rule">
+<h2 id="sec-89">D-05 跨卷移动的定性</h2>
+<p>同卷移动有硬保证（FileID 不变）。跨卷移动只能哈希 + 大小 + 时间窗口匹配，属于尽力而为。</p>
+<h3 id="sec-90">推荐</h3>
+<p>如实按 <code class="inline">02</code> 第 7 节处理，匹配不上就记&quot;删除 + 新增&quot;并打 <code class="inline">move_unconfirmed</code>。<strong>不要为了让路径历史看起来漂亮而强行合并</strong>——错并会把两个不相干文件的版本链混在一起，比丢失更危险。</p>
+<p>第一版共享根只有 <code class="inline">D:\share</code> 一个卷，跨卷场景实际不会触发。但要保留代码路径，因为将来加第二个共享根（比如移动硬盘）就会遇到。</p>
+<hr class="rule">
+<h2 id="sec-91">D-06 外部面的暴露方式</h2>
+<h3 id="sec-92">备选</h3>
+<div class="table-wrap"><table><thead><tr><th>选项</th><th>做法</th><th>风险</th></tr></thead><tbody><tr><td>A（推荐）</td><td>只绑 <code class="inline">127.0.0.1</code>，由隧道（Cloudflare Tunnel / Tailscale / frp）对外</td><td>最低。证书、DDoS、端口扫描都由隧道侧处理</td></tr><tr><td>B</td><td>内置 TLS，直接监听公网端口</td><td>需要自管证书、自管封禁、自管漏洞响应</td></tr><tr><td>C</td><td>只在内网 VPN 内访问</td><td>最安全，但&quot;在外面也能看&quot;的需求落空</td></tr></tbody></table></div>
+<h3 id="sec-93">推荐</h3>
+<p><strong>A</strong>。配置默认 <code class="inline">bind: 127.0.0.1:8443</code>，文档明确不提供一键公网监听。若用户坚持 B，要求先配好证书与 IP 白名单。</p>
+<hr class="rule">
+<h2 id="sec-94">D-07 &quot;无缓存层&quot;的性能风险</h2>
+<p>讨论稿明确选择&quot;目录列举直查 SQLite，不设内存缓存&quot;。这在 Windows 上有一个具体风险：电视 SMB 客户端列举大目录（数千文件）时会高频重复请求。</p>
+<h3 id="sec-95">缓解</h3>
+<ul><li>覆盖索引 + <code class="inline">ORDER BY</code> 走索引，实测目标为 1 万条目 &lt;50ms</li><li>协议层允许 500ms 内的同路径重复列举复用结果（短生命周期、无失效问题）</li><li>若实测不达标，退路是加&quot;目录条目计数 + 版本号&quot;的极简缓存：目录内容变更时版本号 +1，缓存键含版本号，天然无失效问题</li></ul>
+<h3 id="sec-96">定性</h3>
+<p>这是性能风险，不是正确性风险。正确性上无缓存的设计明显更优（移动语义精确、无失效 bug）。<strong>先按无缓存实现，实测不达标再上版本号缓存</strong>，不要提前优化。</p>
+<hr class="rule">
+<h2 id="sec-97">D-08 DLNA 库选型</h2>
+<p>需要在 T-31 阶段评估。约束：</p>
+<ul><li>必须支持 Windows 下的 SSDP 多播（多网卡时需指定接口，否则可能只在一个网卡上广播）</li><li>必须支持自定义 ContentDirectory 后端（从我们自己的索引取数据，而不是扫目录）</li><li>必须允许只暴露媒体类型</li></ul>
+<p>候选方向：<code class="inline">anacrolix/dms</code> 的分层结构可参考，但其内置文件系统后端需要替换成索引后端。若改造量超过自研 SSDP + SOAP 最小集（只需 Browse + 媒体 URL），则自研更可控。</p>
+<p>定性：中等风险，可延后到 M4。</p>
+<hr class="rule">
+<h2 id="sec-98">D-09 权限模型：服务以 LocalSystem 运行</h2>
+<p>网关需要三样提权能力：增删防火墙规则、创建 SMB 共享（<code class="inline">net share</code> / <code class="inline">New-SmbShare</code>）、读卷序列号。</p>
+<p>以 LocalSystem 跑服务是最省事的路径，但意味着<strong>网关进程被攻破即等价于系统管理员</strong>。考虑到网关的对外面是只读 WebDAV 与匿名 SMB，这个风险不能忽略。</p>
+<h3 id="sec-99">缓解</h3>
+<ol><li>WebDAV 处理器严格白名单，路径校验在 VFS 单点完成，不允许任何字符串拼接后直接 <code class="inline">os.Open</code></li><li>SMB 面不经过网关进程（系统提供），网关进程不解析任何来自 SMB 客户端的字节</li><li>只读面与提权能力分离：v2 可考虑拆成两个进程（<code class="inline">fsgw-core</code> 无提权 + <code class="inline">fsgw-priv</code> 有提权，通过命名管道通信，接口只暴露&quot;加规则/删规则/建共享/删共享&quot;四个动作）</li></ol>
+<h3 id="sec-100">推荐</h3>
+<p>第一版单进程 LocalSystem，但<strong>把提权操作收敛到 <code class="inline">internal/platform</code> 的四个函数</strong>，为 v2 拆进程留出切面。</p>
+<hr class="rule">
+<h2 id="sec-101">D-10 控制台形态：HTML 前端 + Go 后端</h2>
+<h3 id="sec-102">已定</h3>
+<p>用户明确要求&quot;用户交互控制前端使用 HTML，后端 Go&quot;。本文档据此把原方案的命名管道控制通道替换为回环 HTTP API，CLI 与网页控制台共用同一套接口（见 <code class="inline">01</code> 第 11 节）。</p>
+<h3 id="sec-103">这条约束带来的三个具体决策</h3>
+<div class="table-wrap"><table><thead><tr><th>子决策</th><th>选择</th><th>替代方案放弃原因</th></tr></thead><tbody><tr><td>前端构建方式</td><td>手写 HTML/CSS/JS，<code class="inline">embed.FS</code> 打包，无 npm</td><td>引入 Vite/React 会带来 node_modules、构建产物与版本漂移，而控制台只有五个区块</td></tr><tr><td>前后端通信</td><td>REST + SSE</td><td>WebSocket 需要额外握手与心跳管理，SSE 单向足够，<code class="inline">EventSource</code> 浏览器原生支持</td></tr><tr><td>后端框架</td><td>标准库 <code class="inline">net/http</code> + Go 1.22 <code class="inline">ServeMux</code></td><td>chi/gin 提供的中间件能力，这里只需要一个 token 校验和一个日志，不值得引依赖</td></tr></tbody></table></div>
+<h3 id="sec-104">必须一起定下的安全边界</h3>
+<p>控制台一旦能驱动开关，它就成了&quot;能把共享推到公网&quot;的遥控器。而它跑在 <code class="inline">127.0.0.1</code>，天然会被<strong>用户浏览器里的任意网页</strong>触达。四道防线（token / Origin / Host / 无 CORS）不是可选项，写进 <code class="inline">01</code> 11.4 之后不得删减。</p>
+<h3 id="sec-105">不做的事</h3>
+<ul><li>不做 Electron 或 WebView2 外壳（多一套运行时，收益只是托盘图标）</li><li>不做移动端适配（控制台只在本机用）</li><li>不做前端状态管理库（五个区块的局部刷新，<code class="inline">fetch</code> + 赋值就够）</li></ul>
+<hr class="rule">
+<h2 id="sec-106">风险登记表</h2>
+<p>等级：高 = 会导致方案不成立或数据错误；中 = 影响体验或需要改设计；低 = 可控。</p>
+<div class="table-wrap"><table><thead><tr><th>ID</th><th>风险</th><th>等级</th><th>概率</th><th>缓解</th><th>监控信号</th></tr></thead><tbody><tr><td>R-01</td><td>SMB 自研路线被低估，M3 卡死</td><td>高</td><td>中</td><td>D-01 选 A，接口隔离</td><td>若 M3 前期出现&quot;要不要自己写协议&quot;的讨论，立即回到 D-01</td></tr><tr><td>R-02</td><td>快照承诺与实际能力不符，造成数据丢失预期</td><td>高</td><td>高</td><td>D-02 选 B，UI 三档标记</td><td><code class="inline">/versions</code> 中 <code class="inline">partial</code> 占比</td></tr><tr><td>R-03</td><td>关闭网关时误删用户的其它 SMB 共享或 445 放行规则</td><td>高</td><td>中</td><td>只删本网关创建的共享（名字前缀校验）；445 防火墙规则的删除做成显式选项 <code class="inline">exclusive: true</code></td><td>关闭后 <code class="inline">net share</code> 列表比对</td></tr><tr><td>R-04</td><td><code class="inline">ReadDirectoryChangesW</code> 缓冲溢出导致索引落后</td><td>中</td><td>高</td><td>64 KiB 缓冲 + 溢出即子树重建 + 6h 抽查</td><td><code class="inline">fsgw_events_overflow_total</code></td></tr><tr><td>R-05</td><td>大目录 <code class="inline">ReadDir</code> 延迟超电视客户端超时</td><td>中</td><td>中</td><td>D-07 的三级缓解</td><td>p99 列举延迟</td></tr><tr><td>R-06</td><td>匿名 SMB 在某些客户端不可用被当成 bug</td><td>中</td><td>高</td><td>D-03 <code class="inline">both</code> 模式 + 一页说明</td><td>连接失败日志按客户端类型分类</td></tr><tr><td>R-07</td><td>SQLite 写队列积压导致移动事件滞后</td><td>中</td><td>中</td><td>结构性优先调度 + 深度告警</td><td><code class="inline">fsgw_write_queue_depth</code></td></tr><tr><td>R-08</td><td>长路径 / 特殊字符导致索引与磁盘不一致</td><td>中</td><td>中</td><td><code class="inline">\\?\</code> 前缀统一、VFS 单点校验、非法字符拒绝</td><td>reconcile 差异计数</td></tr><tr><td>R-09</td><td>LocalSystem 权限放大攻击面</td><td>中</td><td>低</td><td>D-09 收敛提权函数</td><td>审计中的异常路径访问</td></tr><tr><td>R-10</td><td>移动配对超时误判，产生假的删除+新增</td><td>中</td><td>中</td><td>500ms 阈值 + 源路径存在性复核</td><td><code class="inline">move_unconfirmed</code> 计数</td></tr><tr><td>R-11</td><td>卷影（若启用）占用空间超预期</td><td>低</td><td>中</td><td>配额上限 + 空间告警</td><td>快照区占用</td></tr><tr><td>R-12</td><td>DLNA 多网卡只广播一个接口</td><td>低</td><td>中</td><td>配置显式网卡</td><td>电视发现失败</td></tr><tr><td>R-13</td><td>网关重启期间 SMB 写入未入索引</td><td>低</td><td>中</td><td>启动时对共享根做一次全量对齐（仅首次或超过 24h 未对齐）</td><td>启动耗时与对齐节点数</td></tr><tr><td>R-14</td><td>浏览器里的第三方页面驱动控制台开 WAN（CSRF / DNS rebinding）</td><td>高</td><td>中</td><td><code class="inline">01</code> 11.4 四道防线；T-71 把伪造 Origin/Host 作为主断言</td><td>403 计数按原因分类，突增即告警</td></tr><tr><td>R-15</td><td>把校验写在前端，后端被绕过</td><td>高</td><td>中</td><td>DoD 第 6 条：删掉 <code class="inline">app.js</code> 后约束仍须成立</td><td>代码评审专项检查</td></tr><tr><td>R-16</td><td>前后端字段漂移（改了 API 忘改前端）</td><td>中</td><td>高</td><td><code class="inline">01</code> 11.3 表格作为唯一契约，改接口必须同一提交内改表格与前端</td><td>契约测试：对每个响应做字段白名单校验</td></tr><tr><td>R-17</td><td><code class="inline">fsgw ui</code> 把 token 打进 URL，被截图或录屏泄漏</td><td>中</td><td>低</td><td>token 走 fragment（不进 Referer、不进服务端日志）；支持 <code class="inline">fsgw ui --rotate</code> 轮换</td><td>审计中出现陌生来源的 401</td></tr></tbody></table></div>
+<h2 id="sec-107">需要在评审会上拍板的四件事</h2>
+<ol><li><strong>D-01 选 A</strong>（托管系统共享）—— 决定 M3 的形状</li><li><strong>D-02 选 B</strong>（含可选 VSS）—— 决定对用户承诺什么</li><li><strong>D-06 选 A</strong>（只绑回环 + 隧道）—— 决定外部面的部署文档怎么写</li><li><strong>D-10 的安全边界不删减</strong>（token / Origin / Host / 无 CORS）—— 决定控制台能否安全存在</li></ol>
+<p>其余（D-03 到 D-09）按本文推荐值执行即可，不需要单独讨论。</p></section>
+  <footer class="doc-foot">文件共享网关 · 工程设计文档 · 由 docs/*.md 生成</footer>
+</main>
+</div>
+</body>
+</html>

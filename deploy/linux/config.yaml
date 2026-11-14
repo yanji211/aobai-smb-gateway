@@ -1,0 +1,95 @@
+version: 1
+
+# Linux 版数据目录：SQLite 索引、token、日志、快照区
+data_dir: /var/lib/fsgw
+
+shares:
+  - share_id: main
+    # 共享根。guest 会被映射成 nobody，目录需要 o+rx（755 即可）
+    root: /srv/share
+    name: share            # SMB 共享名：\\<IP>\share
+    # 写权限。default false = 只读，电视/手机只能看不能删
+    writable: true
+    media: true
+
+index:
+  debounce_structural_ms: 150
+  debounce_content_ms: 400
+  hash_max_mb: 64
+  reconcile_interval: 6h
+  write_queue_structural: 1024
+  write_queue_content: 8192
+
+snapshot:
+  enabled: false
+
+smb:
+  enabled: true
+  # SMB 服务端是进程内的纯 Go SMB2/3 实现（不装 samba、不写 /etc/samba）。
+  # 两种登录并存：匿名按来宾放行（电视/手机/老系统），报 account_name 的必须验对口令。
+  auth: guest
+  account_name: admin
+  # 账号口令只存 NT 哈希（NT 哈希 = MD4(UTF-16LE(口令))，用 `fsgw smb nt-hash <口令>` 生成）。
+  # NTLM 验算只需要这个哈希，所以配置里不必留明文；也可继续写 password: "明文"。
+  # 为什么必须有账号：Win11 24H2+ 默认强制 SMB 签名，来宾会话没有会话密钥、签不了名，
+  # 资源管理器只会报"你的计算机策略阻止了未经验证的来宾访问"。
+  nt_hash: "00000000000000000000000000000000"  # 占位值！部署前用 fsgw smb nt-hash <口令> 生成后替换
+  lan_only: true
+  # 免密模式下是否允许写入。default false = 只读（电视只能播放，不能删文件）
+  guest_writable: true
+  # 纯 SMB1 客户端（小米电视、老投影等）：这条 TCP 连接整条转交给回环上的
+  # samba 兼容后端（/etc/fsgw/smb1.conf，只讲 NT1、只读、guest 放行）。
+  # 留空 = 不支持 SMB1，遇到这类客户端直接拒绝并记一条 WARN。
+  smb1_backend: ""
+  exclusive: false
+
+dlna:
+  enabled: true
+  http_port: 8200
+  friendly_name: 家庭共享
+
+webdav:
+  enabled: true
+  # Linux 这边不代管防火墙，所以这个绑定地址就是实际可达范围
+  bind: 0.0.0.0:8443
+  username: admin
+  password: ""
+  # 口令与 SMB 账号同一套，控制台登录也用它（明文不入库，见运维记录）；改口令用 fsgw passwd 或控制台
+  password_hash: ""  # 未设置：在控制台「外部访问口令」里设置后自动写回
+  # 多账号：与上面的 username 取并集，可继续往下加
+  users:
+    - username: fsgw
+      password_hash: ""  # 未设置：在控制台「外部访问口令」里设置后自动写回
+
+ui:
+  # Linux 服务器没有桌面，"只绑回环"等于没有控制台可用。
+  # 放开到网卡地址，但控制台本身仍是 token 鉴权 + Host/Origin 校验：
+  #   - Host 必须是回环地址 / 本机网卡 IP / 下面 allow 的域名，别的一律 403（防 DNS rebinding）
+  #   - 所有 /api/* 必须带 X-FSGW-Token，token 在 /var/lib/fsgw/control.token
+  # 打开方式：fsgw ui 打印带 token 的地址，从浏览器直接访问
+  bind: 0.0.0.0:8444
+  allow_remote: true
+  # 额外放行的域名（本机 IP 与回环已自动放行，不需要重复写）
+  allowed_hosts:
+    - linux-fsgw
+    - linux-fsgw.local
+
+switch:
+  startup_state: ALL       # 开机即开（家庭局域网常驻）；要更保守改回 OFF
+
+log:
+  level: info
+  audit_retention_days: 30
+
+sync:
+  # 快同步：客户端用 fsgw-sync 推目录过来。属于局域网面，
+  # 总开关为 OFF / 仅外部时不会监听。
+  enabled: true
+  bind: 0.0.0.0:8445
+  allow_remote: true
+  roots: []            # 空 = 所有 writable 的共享根
+  chunk_mb: 4
+  max_files: 1000000
+  max_parallel_files: 16
+  session_ttl_hours: 72
+  verify: chunk        # chunk=只校验每块(快)；full=落盘后再整文件 hash

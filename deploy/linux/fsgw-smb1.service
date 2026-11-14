@@ -1,0 +1,18 @@
+[Unit]
+Description=fsgw SMB1 兼容后端（只给仅支持 SMB1 的老设备，仅监听 127.0.0.1:4450）
+Documentation=file:///etc/fsgw/smb1.conf
+# 445 由 fsgw 自己持有；本服务只在回环的 4450 上给"纯 SMB1 客户端"兜底，
+# 两者没有端口冲突。system 自带的 smbd/nmbd 已被 mask，不会被 apt 升级重新拉起来抢 445。
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStartPre=/bin/mkdir -p /run/fsgw-smb1 /var/lib/fsgw/smb1/lock /var/lib/fsgw/smb1/state /var/lib/fsgw/smb1/cache /var/lib/fsgw/smb1/private /var/log/fsgw
+ExecStart=/usr/sbin/smbd --foreground --no-process-group -s /etc/fsgw/smb1.conf
+Restart=always
+RestartSec=2
+LimitNOFILE=8192
+
+[Install]
+WantedBy=multi-user.target

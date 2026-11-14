@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>文件共享网关 · 控制台原型</title>
+<style>
+  :root {
+    --bg: #f7f8fa; --card: #ffffff; --text: #1f2933; --muted: #5f6b7a;
+    --border: #e3e8ef; --accent: #2563eb; --accent-soft: #eff4ff;
+    --warn: #b45309; --warn-soft: #fff7ed; --warn-line: #fed7aa;
+    --ok: #15803d; --ok-soft: #f0fdf4; --ok-line: #bbf7d0;
+    --danger: #b91c1c; --danger-soft: #fef2f2; --danger-line: #fecaca;
+    --idle: #64748b; --idle-soft: #f1f5f9;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text); font-size: 14px; line-height: 1.7;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+      "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 26px 20px 70px; }
+
+  header.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 18px; }
+  header.top h1 { margin: 0; font-size: 21px; letter-spacing: -0.01em; }
+  header.top .sub { color: var(--muted); font-size: 13px; margin-top: 2px; }
+  .proto-tag {
+    display: inline-flex; align-items: center; gap: 6px; background: var(--warn-soft);
+    color: var(--warn); border: 1px solid var(--warn-line); border-radius: 999px;
+    padding: 3px 11px; font-size: 12px; font-weight: 600;
+  }
+  .proto-tag i { width: 6px; height: 6px; border-radius: 50%; background: var(--warn); display: block; }
+
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 13px; padding: 18px 20px; }
+  .card + .card { margin-top: 14px; }
+  .card h2 { margin: 0 0 12px; font-size: 14px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; }
+  .card h2 .hint { font-weight: 400; text-transform: none; letter-spacing: 0; color: #93a1b3; margin-left: 6px; }
+
+  /* 总开关 */
+  .switchbar { display: grid; grid-template-columns: 1fr auto; gap: 18px; align-items: center; }
+  .seg { display: inline-flex; background: #f1f4f9; border: 1px solid var(--border); border-radius: 11px; padding: 4px; gap: 4px; }
+  .seg button {
+    appearance: none; border: 0; background: transparent; cursor: pointer;
+    padding: 9px 18px; border-radius: 8px; font-size: 13.5px; font-weight: 600;
+    color: var(--muted); font-family: inherit; transition: all .15s;
+  }
+  .seg button:hover { color: var(--text); background: #e8edf6; }
+  .seg button.on { background: var(--card); color: var(--text); box-shadow: 0 1px 3px rgba(16,24,40,.12); }
+  .seg button.on[data-s="LAN"] { color: var(--ok); }
+  .seg button.on[data-s="WAN"] { color: var(--warn); }
+  .seg button.on[data-s="ALL"] { color: var(--accent); }
+  .seg button.on[data-s="OFF"] { color: var(--idle); }
+
+  .state-line { margin-top: 10px; font-size: 13px; color: var(--muted); min-height: 22px; }
+  .state-line b { color: var(--text); }
+  .state-line .warn { color: var(--warn); font-weight: 600; }
+  .confirm-strip {
+    margin-top: 10px; display: none; align-items: center; gap: 12px;
+    background: var(--warn-soft); border: 1px solid var(--warn-line);
+    border-radius: 9px; padding: 10px 13px; font-size: 13px; color: #7c3a06;
+  }
+  .confirm-strip.show { display: flex; }
+  .confirm-strip .grow { flex: 1; }
+
+  button.btn {
+    appearance: none; font-family: inherit; cursor: pointer; border-radius: 8px;
+    border: 1px solid var(--border); background: var(--card); color: var(--text);
+    padding: 8px 14px; font-size: 13px; font-weight: 600; transition: all .15s;
+  }
+  button.btn:hover { background: #f5f8fc; border-color: #cfd8e5; }
+  button.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.btn.primary:hover { background: #1d4ed8; }
+  button.btn.danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+  button.btn.danger:hover { background: #991b1b; }
+  button.btn.ghost { background: transparent; }
+  button.btn.mini { padding: 4px 10px; font-size: 12px; }
+  button.btn:disabled { opacity: .55; cursor: not-allowed; }
+
+  /* 服务面 */
+  .grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+  .svc { border: 1px solid var(--border); border-radius: 11px; padding: 14px; background: #fdfefe; }
+  .svc .row1 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .svc .name { font-weight: 700; font-size: 13.5px; }
+  .pill { display: inline-flex; align-items: center; gap: 5px; border-radius: 999px; padding: 2px 9px; font-size: 11.5px; font-weight: 700; }
+  .pill i { width: 5px; height: 5px; border-radius: 50%; display: block; }
+  .pill.ok { background: var(--ok-soft); color: var(--ok); border: 1px solid var(--ok-line); }
+  .pill.ok i { background: var(--ok); }
+  .pill.off { background: var(--idle-soft); color: var(--idle); border: 1px solid var(--border); }
+  .pill.off i { background: var(--idle); }
+  .pill.warn { background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn-line); }
+  .pill.warn i { background: var(--warn); }
+  .svc .addr { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12px; color: #475569; margin: 9px 0 10px; word-break: break-all; }
+  .svc .ops { display: flex; gap: 6px; }
+
+  /* 共享目录 */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid #eef1f6; vertical-align: middle; }
+  th { color: var(--muted); font-weight: 600; font-size: 12px; background: #fafbfd; }
+  tr:last-child td { border-bottom: 0; }
+  code.mono { font-family: "SFMono-Regular", Consolas, monospace; font-size: 12.5px; background: #f2f5f9; padding: 1px 6px; border-radius: 4px; }
+  .tag { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 5px; padding: 1px 7px; margin-right: 5px; }
+  .tag.rw { background: var(--ok-soft); color: var(--ok); }
+  .tag.ro { background: var(--idle-soft); color: var(--idle); }
+  .tag.media { background: var(--accent-soft); color: var(--accent); }
+
+  /* 索引 / 快照 */
+  .grid2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 14px; }
+  .kpis { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 12px; }
+  .kpi { background: #fafbfd; border: 1px solid #eef1f6; border-radius: 9px; padding: 9px 11px; }
+  .kpi .k { font-size: 11.5px; color: var(--muted); }
+  .kpi .v { font-size: 17px; font-weight: 700; letter-spacing: -0.02em; margin-top: 1px; }
+  .kpi .v small { font-size: 11px; font-weight: 500; color: var(--muted); margin-left: 3px; }
+  .spark { display: block; width: 100%; height: 46px; }
+  .bar { height: 7px; border-radius: 999px; background: #eef1f6; overflow: hidden; margin: 8px 0 5px; }
+  .bar > span { display: block; height: 100%; border-radius: 999px; background: var(--accent); }
+  .bar.tight > span { background: var(--warn); }
+  .barline { display: flex; justify-content: space-between; font-size: 12px; color: var(--muted); }
+
+  /* 诊断 */
+  .diag { display: grid; gap: 6px; }
+  .diag .item { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; padding: 6px 0; border-bottom: 1px dashed #eef1f6; }
+  .diag .item:last-child { border-bottom: 0; }
+  .diag .ico { flex: 0 0 16px; font-weight: 700; line-height: 1.5; }
+  .diag .ico.ok { color: var(--ok); }
+  .diag .ico.warn { color: var(--warn); }
+  .diag .ico.bad { color: var(--danger); }
+  .diag .t { color: var(--muted); }
+
+  /* 审计 */
+  .chips { display: flex; gap: 7px; margin-bottom: 10px; flex-wrap: wrap; }
+  .chip { appearance: none; font-family: inherit; cursor: pointer; border: 1px solid var(--border); background: var(--card); color: var(--muted); border-radius: 999px; padding: 4px 12px; font-size: 12.5px; font-weight: 600; }
+  .chip.on { background: var(--accent-soft); border-color: #cddffd; color: var(--accent); }
+  .res-ok { color: var(--ok); font-weight: 600; }
+  .res-deny { color: var(--danger); font-weight: 600; }
+  .audit-scroll { max-height: 230px; overflow-y: auto; }
+
+  footer.foot { margin-top: 20px; color: var(--muted); font-size: 12px; text-align: center; }
+  .toast {
+    position: fixed; left: 50%; transform: translateX(-50%) translateY(80px);
+    bottom: 26px; background: #111827; color: #f9fafb; padding: 9px 16px; border-radius: 9px;
+    font-size: 12.5px; opacity: 0; transition: all .22s; pointer-events: none; z-index: 20;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (max-width: 900px) {
+    .grid3 { grid-template-columns: 1fr; }
+    .grid2 { grid-template-columns: 1fr; }
+    .kpis { grid-template-columns: repeat(2, minmax(0,1fr)); }
+    .switchbar { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>文件共享网关</h1>
+      <div class="sub">本机控制台 · 127.0.0.1:8444 · 共享根 D:\share</div>
+    </div>
+    <span class="proto-tag"><i></i>原型 · 数据为假 · 交互为真</span>
+  </header>
+
+  <!-- 总开关 -->
+  <section class="card">
+    <div class="switchbar">
+      <div>
+        <h2 style="margin-bottom:10px">总开关 <span class="hint">关闭即零暴露：无监听、无防火墙规则</span></h2>
+        <div class="seg" id="seg">
+          <button data-s="OFF">OFF</button>
+          <button data-s="LAN">局域网</button>
+          <button data-s="WAN">仅外部</button>
+          <button data-s="ALL">全部</button>
+        </div>
+        <div class="state-line" id="stateLine"></div>
+        <div class="confirm-strip" id="confirmStrip">
+          <span class="grow" id="confirmText"></span>
+          <button class="btn mini" id="confirmCancel">取消</button>
+          <button class="btn primary mini" id="confirmOk">确认开启</button>
+        </div>
+      </div>
+      <div style="text-align:right">
+        <button class="btn danger" id="btnAllOff">一键全关</button>
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">立即停止全部对外服务</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 服务面 -->
+  <section class="card">
+    <h2>服务面 <span class="hint">连接串可直接发给手机</span></h2>
+    <div class="grid3" id="svcGrid"></div>
+  </section>
+
+  <!-- 共享目录 -->
+  <section class="card">
+    <h2>共享目录 <span class="hint">只有白名单目录会被索引与暴露</span></h2>
+    <table>
+      <thead><tr><th>路径</th><th>权限</th><th>属性</th><th style="width:88px"></th></tr></thead>
+      <tbody id="shareRows"></tbody>
+    </table>
+    <div style="margin-top:12px">
+      <button class="btn" id="btnAddShare">+ 添加共享目录</button>
+      <span style="font-size:12px;color:var(--muted);margin-left:8px">通过后端目录浏览接口选择，浏览器拿不到本地路径</span>
+    </div>
+  </section>
+
+  <!-- 索引与快照 -->
+  <section class="card">
+    <h2>索引与快照 <span class="hint">数据库是唯一真相源，磁盘只提供字节</span></h2>
+    <div class="grid2">
+      <div>
+        <div class="kpis">
+          <div class="kpi"><div class="k">已索引文件</div><div class="v" id="kFiles">—</div></div>
+          <div class="kpi"><div class="k">待处理事件</div><div class="v" id="kPending">—</div></div>
+          <div class="kpi"><div class="k">写队列深度</div><div class="v" id="kQueue">—</div></div>
+          <div class="kpi"><div class="k">索引版本</div><div class="v" id="kVers">—</div></div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);margin-bottom:4px">近 30 分钟事件速率</div>
+        <svg class="spark" id="spark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
+        <div style="margin-top:8px;font-size:12.5px;color:var(--muted)" id="reconcileLine"></div>
+      </div>
+      <div>
+        <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:2px">
+          <b style="font-size:13px">内容快照占用</b>
+          <span style="font-size:12px;color:var(--muted)" id="snapCount"></span>
+        </div>
+        <div class="bar" id="snapBar"><span style="width:0%"></span></div>
+        <div class="barline"><span id="snapUsed"></span><span id="snapQuota"></span></div>
+        <div style="margin-top:14px;font-size:12.5px;color:var(--muted);line-height:1.75" id="snapNote"></div>
+        <div style="margin-top:12px;display:flex;gap:6px">
+          <button class="btn mini" id="btnGc">立即清理</button>
+          <button class="btn mini ghost" id="btnVersions">查看历史版本</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 诊断 -->
+  <section class="card">
+    <h2>诊断 <span class="hint">把"连不上但不是 bug"的问题前置暴露</span></h2>
+    <div class="diag" id="diagList"></div>
+  </section>
+
+  <!-- 审计 -->
+  <section class="card">
+    <h2>审计日志 <span class="hint">最近 200 条，滚动文件保留 30 天</span></h2>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="all">全部</button>
+      <button class="chip" data-f="switch">开关</button>
+      <button class="chip" data-f="write">写入</button>
+      <button class="chip" data-f="deny">拒绝</button>
+    </div>
+    <div class="audit-scroll">
+      <table>
+        <thead><tr><th style="width:74px">时间</th><th style="width:92px">来源</th><th>操作</th><th>结果</th></tr></thead>
+        <tbody id="auditRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    原型说明：本页为信息架构与交互草稿，数据全部为假。真实控制台由 Go 内嵌提供，接口见 docs/01 第 11.3 节。
+  </footer>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STATE = {
+    applied: "LAN",
+    desired: "LAN",
+    busy: false,
+    shares: [
+      { path: "D:\\share", rw: true, media: true, root: true },
+      { path: "D:\\share\\media", rw: true, media: true, root: false },
+      { path: "D:\\share\\private", rw: false, media: false, root: false }
+    ],
+    index: { files: 184203, pending: 12, queue: 3, versions: 96 },
+    snapshot: { used: 41.6, quota: 200, count: 731 },
+    audit: [],
+    filter: "all"
+  };
+
+  var STATE_TEXT = {
+    OFF: ["全部服务已停止", "无监听端口、无防火墙规则。索引仍在后台维护。"],
+    LAN: ["局域网可访问", "SMB 445 + DLNA 1900/8200 已就绪，外部面关闭。"],
+    WAN: ["仅外部可访问", "WebDAV 8443 已就绪，局域网面关闭。"],
+    ALL: ["全部面已开启", "局域网与外部同时暴露，请确认外部口令已设置。"]
+  };
+
+  function $(id) { return document.getElementById(id); }
+
+  function toast(msg) {
+    var t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.classList.remove("show"); }, 1700);
+  }
+
+  function fmt(n) { return n.toLocaleString("zh-CN"); }
+
+  /* ---------------- 总开关 ---------------- */
+  function isUnsafe(target) {
+    return (target === "WAN" || target === "ALL") && STATE.applied === "OFF";
+  }
+
+  function renderSwitch() {
+    var seg = $("seg");
+    Array.prototype.forEach.call(seg.children, function (b) {
+      b.classList.toggle("on", b.dataset.s === STATE.applied);
+    });
+    var t = STATE_TEXT[STATE.applied];
+    $("stateLine").innerHTML = "<b>" + t[0] + "</b> · " + t[1];
+    renderServices();
+    renderDiag();
+  }
+
+  function applyState(target) {
+    if (STATE.busy || target === STATE.applied) { return; }
+    STATE.busy = true;
+    var line = $("stateLine");
+    line.innerHTML = '<span class="warn">正在切换：</span> 创建防火墙规则 → 启动监听 → 自检…';
+    setTimeout(function () {
+      STATE.applied = target;
+      STATE.desired = target;
+      STATE.busy = false;
+      renderSwitch();
+      pushAudit("127.0.0.1", "switch → " + target, "ok", "switch");
+      toast("已切换为 " + target);
+    }, 720);
+  }
+
+  $("seg").addEventListener("click", function (e) {
+    var b = e.target.closest("button");
+    if (!b) { return; }
+    var target = b.dataset.s;
+    if (target === STATE.applied) { return; }
+    if (isUnsafe(target)) {
+      $("confirmText").innerHTML = "即将开启 <b>" + target + "</b>，外部网络将可以访问本机共享。确认？";
+      $("confirmStrip").classList.add("show");
+      $("confirmStrip").dataset.target = target;
+      return;
+    }
+    $("confirmStrip").classList.remove("show");
+    applyState(target);
+  });
+
+  $("confirmCancel").addEventListener("click", function () {
+    $("confirmStrip").classList.remove("show");
+  });
+
+  $("confirmOk").addEventListener("click", function () {
+    var t = $("confirmStrip").dataset.target;
+    $("confirmStrip").classList.remove("show");
+    applyState(t);
+  });
+
+  $("btnAllOff").addEventListener("click", function () {
+    if (STATE.applied === "OFF") { toast("已经是关闭状态"); return; }
+    applyState("OFF");
+  });
+
+  /* ---------------- 服务面 ---------------- */
+  var SERVICES = [
+    { key: "smb", name: "SMB", port: "445", on: { LAN: 1, ALL: 1 }, addr: "smb://192.0.2.20/share", note: "匿名 + 账户 fsgw" },
+    { key: "dlna", name: "DLNA", port: "1900 / 8200", on: { LAN: 1, ALL: 1 }, addr: "家庭共享（电视自动发现）", note: "仅媒体目录" },
+    { key: "webdav", name: "WebDAV", port: "8443", on: { WAN: 1, ALL: 1 }, addr: "https://files.example.com/share/", note: "只读 · 强制 TLS" }
+  ];
+
+  function renderServices() {
+    $("svcGrid").innerHTML = SERVICES.map(function (s) {
+      var up = !!s.on[STATE.applied];
+      var pill = up ? '<span class="pill ok"><i></i>就绪</span>' : '<span class="pill off"><i></i>停止</span>';
+      return '<div class="svc">' +
+        '<div class="row1"><span class="name">' + s.name + '</span>' + pill + '</div>' +
+        '<div class="addr">' + s.addr + '</div>' +
+        '<div style="font-size:12px;color:var(--muted);margin-bottom:9px">端口 ' + s.port + ' · ' + s.note + '</div>' +
+        '<div class="ops">' +
+          '<button class="btn mini" data-copy="' + s.addr + '">复制地址</button>' +
+          '<button class="btn mini ghost" data-svc="' + s.key + '">详情</button>' +
+        '</div>' +
+      '</div>';
+    }).join("");
+  }
+
+  document.addEventListener("click", function (e) {
+    var copyBtn = e.target.closest("[data-copy]");
+    if (copyBtn) {
+      var txt = copyBtn.dataset.copy;
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(txt).then(function () { toast("已复制：" + txt); }, function () { toast(txt); });
+      } else { toast(txt); }
+    }
+    var svcBtn = e.target.closest("[data-svc]");
+    if (svcBtn) { toast("真实版本会展开该面最近 20 条连接记录"); }
+  });
+
+  /* ---------------- 共享目录 ---------------- */
+  function renderShares() {
+    $("shareRows").innerHTML = STATE.shares.map(function (s, i) {
+      var tags = '<span class="tag ' + (s.rw ? "rw" : "ro") + '">' + (s.rw ? "可读写" : "只读") + '</span>';
+      if (s.media) { tags += '<span class="tag media">媒体</span>'; }
+      return '<tr>' +
+        '<td><code class="mono">' + s.path + '</code>' + (s.root ? ' <span style="font-size:11px;color:var(--muted)">根</span>' : '') + '</td>' +
+        '<td>' + (s.rw ? "可读写" : "只读") + '</td>' +
+        '<td>' + tags + '</td>' +
+        '<td><button class="btn mini ghost" data-del="' + i + '"' + (s.root ? ' disabled' : '') + '>移除</button></td>' +
+      '</tr>';
+    }).join("");
+  }
+
+  $("shareRows").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-del]");
+    if (!b) { return; }
+    var i = Number(b.dataset.del);
+    var s = STATE.shares[i];
+    if (!confirm("移除共享目录 " + s.path + "？仅停止暴露，磁盘文件不受影响。")) { return; }
+    STATE.shares.splice(i, 1);
+    renderShares();
+    pushAudit("127.0.0.1", "share remove " + s.path, "ok", "switch");
+    toast("已移除 " + s.path);
+  });
+
+  $("btnAddShare").addEventListener("click", function () {
+    toast("真实版本会打开后端目录浏览面板（只列目录，不列文件）");
+  });
+
+  /* ---------------- 索引 ---------------- */
+  function renderIndex() {
+    $("kFiles").textContent = fmt(STATE.index.files);
+    $("kPending").innerHTML = STATE.index.pending + "<small>条</small>";
+    $("kQueue").innerHTML = STATE.index.queue + "<small>/8192</small>";
+    $("kVers").textContent = fmt(STATE.index.versions);
+
+    var pts = [], n = 30, seed = 7;
+    for (var i = 0; i < n; i++) {
+      seed = (seed * 9301 + 49297) % 233280;
+      var v = 6 + (seed / 233280) * 26 + (i < 8 ? 14 : 0);
+      pts.push(v);
+    }
+    var max = Math.max.apply(null, pts) + 2;
+    var d = pts.map(function (v, i) {
+      var x = (i / (n - 1)) * 300;
+      var y = 44 - (v / max) * 40;
+      return (i ? "L" : "M") + x.toFixed(1) + " " + y.toFixed(1);
+    }).join(" ");
+    $("spark").innerHTML =
+      '<path d="' + d + ' L300 46 L0 46 Z" fill="rgba(37,99,235,.10)"/>' +
+      '<path d="' + d + '" fill="none" stroke="#2563eb" stroke-width="1.6" stroke-linejoin="round"/>';
+
+    $("reconcileLine").textContent = "最近一次子树重建：今天 12:41（overflow，节点 1,284，耗时 210ms）";
+  }
+
+  function renderSnapshot() {
+    var pct = Math.min(100, (STATE.snapshot.used / STATE.snapshot.quota) * 100);
+    $("snapBar").querySelector("span").style.width = pct.toFixed(1) + "%";
+    $("snapBar").classList.toggle("tight", pct > 80);
+    $("snapUsed").textContent = "已用 " + STATE.snapshot.used.toFixed(1) + " GB";
+    $("snapQuota").textContent = "配额 " + STATE.snapshot.quota + " GB";
+    $("snapCount").textContent = fmt(STATE.snapshot.count) + " 个版本";
+    $("snapNote").innerHTML =
+      "内容来源分级：<br>" +
+      "<b>完整</b> — 网关写路径与卷影时点<br>" +
+      "<b>尽力</b> — SMB 客户端写入，可能不完整<br>" +
+      "<b>仅元数据</b> — 无内容快照，只能查到变更记录";
+  }
+
+  $("btnGc").addEventListener("click", function () {
+    toast("清理按配额与时间梯度执行，最新版本与 pinned 快照永不清理");
+  });
+  $("btnVersions").addEventListener("click", function () {
+    toast("真实版本跳转 /versions 只读视图");
+  });
+
+  /* ---------------- 诊断 ---------------- */
+  function renderDiag() {
+    var lan = STATE.applied === "LAN" || STATE.applied === "ALL";
+    var items = [
+      { lv: "ok", t: "445 端口", d: lan ? "由系统 SMB 服务持有，进程无额外绑定" : "未监听" },
+      { lv: "warn", t: "匿名 SMB 客户端策略", d: "本机允许来宾登录；局域网内 Windows 10/11 客户端需改 AllowInsecureGuestAuth 才能连匿名共享，iOS「文件」需账户 fsgw" },
+      { lv: "ok", t: "磁盘空间", d: "D: 剩余 412 GB / 1.8 TB" },
+      { lv: "ok", t: "防火墙规则", d: lan ? "FSGW-SMB-445、FSGW-DLNA-1900/8200 存在" : "无 FSGW- 前缀规则" },
+      { lv: "ok", t: "索引一致性", d: "上次抽查 24h 内变更 1,204 项，差异 0" },
+      { lv: STATE.applied === "OFF" ? "ok" : "warn", t: "外部暴露", d: (STATE.applied === "WAN" || STATE.applied === "ALL") ? "WebDAV 已可被外部访问，确认反向代理与口令已就位" : "未暴露到外部" }
+    ];
+    $("diagList").innerHTML = items.map(function (it) {
+      var mark = it.lv === "ok" ? "✓" : it.lv === "warn" ? "!" : "×";
+      return '<div class="item"><span class="ico ' + it.lv + '">' + mark + '</span>' +
+        '<span><b>' + it.t + '</b> <span class="t">' + it.d + '</span></span></div>';
+    }).join("");
+  }
+
+  /* ---------------- 审计 ---------------- */
+  function nowStr(offsetSec) {
+    var d = new Date(Date.now() - (offsetSec || 0) * 1000);
+    var p = function (x) { return String(x).padStart(2, "0"); };
+    return p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+  }
+
+  function seedAudit() {
+    var rows = [
+      ["smb", "写 D:\\share\\media\\2024 家庭录像.mp4", "ok", "write", 3],
+      ["smb", "移动 D:\\share\\照片 → D:\\share\\media\\照片", "ok", "write", 26],
+      ["127.0.0.1", "switch → LAN", "ok", "switch", 58],
+      ["webdav", "GET /share/合同/2026 报价单.pdf", "ok", "write", 91],
+      ["smb", "删除 D:\\share\\private\\旧备份.zip", "ok", "write", 120],
+      ["webdav", "PUT /share/a.txt（方法未允许）", "deny", "deny", 148],
+      ["smb", "路径穿越 D:\\share\\..\\Windows\\System32", "deny", "deny", 176],
+      ["smb", "写 D:\\share\\文档\\周报.docx", "ok", "write", 203],
+      ["127.0.0.1", "GET /api/fs/list?path=D:\\", "ok", "switch", 240],
+      ["webdav", "认证失败（口令错误）", "deny", "deny", 275]
+    ];
+    STATE.audit = rows.map(function (r) {
+      return { time: nowStr(r[4]), src: r[0], action: r[1], res: r[2], kind: r[3] };
+    });
+  }
+
+  function pushAudit(src, action, res, kind) {
+    STATE.audit.unshift({ time: nowStr(0), src: src, action: action, res: res, kind: kind });
+    if (STATE.audit.length > 60) { STATE.audit.pop(); }
+    renderAudit();
+  }
+
+  function renderAudit() {
+    var rows = STATE.audit.filter(function (r) {
+      if (STATE.filter === "all") { return true; }
+      if (STATE.filter === "deny") { return r.res === "deny"; }
+      return r.kind === STATE.filter;
+    });
+    $("auditRows").innerHTML = rows.length ? rows.map(function (r) {
+      return '<tr>' +
+        '<td style="color:var(--muted)">' + r.time + '</td>' +
+        '<td><code class="mono">' + r.src + '</code></td>' +
+        '<td>' + r.action + '</td>' +
+        '<td class="' + (r.res === "ok" ? "res-ok" : "res-deny") + '">' + (r.res === "ok" ? "成功" : "拒绝") + '</td>' +
+      '</tr>';
+    }).join("") : '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:22px">该筛选下没有记录</td></tr>';
+  }
+
+  $("chips").addEventListener("click", function (e) {
+    var b = e.target.closest(".chip");
+    if (!b) { return; }
+    STATE.filter = b.dataset.f;
+    Array.prototype.forEach.call($("chips").children, function (c) { c.classList.toggle("on", c === b); });
+    renderAudit();
+  });
+
+  /* ---------------- 启动 ---------------- */
+  seedAudit();
+  renderSwitch();
+  renderShares();
+  renderIndex();
+  renderSnapshot();
+  renderAudit();
+
+  // 模拟 SSE 推送：数值轻微跳动，证明"不刷新页面也会更新"
+  setInterval(function () {
+    STATE.index.pending = Math.max(0, STATE.index.pending + (Math.random() > 0.5 ? 1 : -1));
+    STATE.index.queue = Math.max(0, Math.min(9, STATE.index.queue + (Math.random() > 0.6 ? 1 : -1)));
+    $("kPending").innerHTML = STATE.index.pending + "<small>条</small>";
+    $("kQueue").innerHTML = STATE.index.queue + "<small>/8192</small>";
+  }, 2600);
+})();
+</script>
+</body>
+</html>

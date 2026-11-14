@@ -1,0 +1,95 @@
+version: 1
+
+# Linux 版数据目录：SQLite 索引、token、日志、快照区
+data_dir: /var/lib/fsgw
+
+shares:
+  - share_id: main
+    # 共享根。guest 会被映射成 nobody，目录需要 o+rx（755 即可）
+    root: /srv/share
+    name: share            # SMB 共享名：\\<IP>\share
+    # 写权限。default false = 只读，电视/手机只能看不能删
+    writable: false
+    media: true
+
+index:
+  debounce_structural_ms: 150
+  debounce_content_ms: 400
+  hash_max_mb: 64
+  reconcile_interval: 6h
+  write_queue_structural: 1024
+  write_queue_content: 8192
+
+snapshot:
+  enabled: false
+
+smb:
+  enabled: true
+  # SMB 服务端是进程内的纯 Go SMB2/3 实现（不装 samba、不写 /etc/samba）。
+  # auth 仅支持 guest：走完整 NTLM 握手，口令留空即通过，填任意口令也按来宾放行。
+  auth: guest
+  account_name: fsgw
+  lan_only: true
+  # 免密模式下是否允许写入。default false = 只读（电视只能播放，不能删文件）
+  guest_writable: false
+  exclusive: false
+
+  # macOS 自动写的影子文件（.DS_Store / ._xxx / .Trashes …）在目录枚举里怎么处理：
+  #   hide（默认，留空等同）= 只对非 macOS 接入端隐藏：Windows/Linux/电视看到的是干净目录，
+  #                          mac 自己仍看得见（它找得到就不会每次进目录重写一遍）
+  #   all                   = 连 mac 一起藏
+  #   off                   = 都不过滤，排障用
+  # 存量文件（磁盘上照旧存在）用 `fsgw clean-meta` 清，默认只列清单，-force 才删。
+  apple_meta: hide
+
+  # 纯 SMB1 客户端（小米电视、老投影、老播放器）走哪条通道。
+  # 网关自己只讲 SMB2/3；这类客户端只认 NT LM 0.12，认出后那条 TCP 连接会交给
+  # 进程内置的最小 SMB1 通道（internal/smbgo/smb1srv.go，Linux/Windows 同一套代码）。
+  # 留空 = 用内置通道，不需要在系统里装 samba。
+  # 只有想改用外部 samba 时才填地址（deploy/linux/smb1.conf：只监听回环 4450、只讲 NT1）：
+  #   smb1_backend: 127.0.0.1:4450
+  smb1_backend: ""
+
+dlna:
+  enabled: true
+  http_port: 8200
+  friendly_name: 熬拜共享家
+
+webdav:
+  enabled: true
+  # Linux 这边不代管防火墙，所以这个绑定地址就是实际可达范围
+  bind: 0.0.0.0:8443
+  username: fsgw
+  password: ""
+  # 口令只留加盐摘要（明文不入库）；改口令用 `fsgw passwd` 或控制台
+  password_hash: ""  # 未设置：在控制台「外部访问口令」里设置后自动写回
+
+ui:
+  # 控制台。服务器没有桌面，"只绑回环"等于没有界面可用，所以 Linux 模板默认对局域网开放。
+  # 安全边界靠 token + Host/Origin 校验（不是靠回环）：
+  #   所有 /api/* 必须带 control.token 里的 token；Host 只认回环/本机网卡 IP/下面 allow 的域名。
+  # 打开方式：sudo fsgw ui  → 打印带 token 的地址，从别的机器访问
+  bind: 0.0.0.0:8444
+  allow_remote: true
+  # 走域名访问时把名字写进来（按 IP 访问不必填）
+  allowed_hosts: []
+
+switch:
+  startup_state: OFF       # OFF | LAN | WAN | ALL
+
+log:
+  level: info
+  audit_retention_days: 30
+
+sync:
+  # 快同步：客户端用 fsgw-sync 推目录过来（分块并行 + 位图续传 + 小文件打包）。
+  # 属于局域网面：总开关为 OFF / WAN 时不监听。令牌在 <data_dir>/sync.token。
+  enabled: true
+  bind: 0.0.0.0:8445
+  allow_remote: true       # 绑非回环必须显式点头
+  roots: []                # 空 = 所有 writable 的共享根；也可写 share_id 列表
+  chunk_mb: 4              # 1–32
+  max_files: 1000000        # 单次会话清单上限（一个 node_modules 目录就十几万）
+  max_parallel_files: 16
+  session_ttl_hours: 72    # 超期会话连同 .part 一起清掉
+  verify: chunk            # chunk=只验每块(快) | full=落盘后再整文件 hash

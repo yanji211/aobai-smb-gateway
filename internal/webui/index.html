@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>熬拜共享家 · 控制台</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1>熬拜共享家</h1>
+      <div class="sub" id="subline">正在连接…</div>
+    </div>
+    <div class="top-right">
+      <span class="pill" id="adminPill">权限检测中</span>
+      <span class="pill" id="verPill">v—</span>
+      <button class="btn mini ghost" id="btnToken" title="退出登录（清除本机会话与记住的令牌）">退出登录</button>
+      <button class="btn mini ghost" id="btnQuit" title="先关闭全部共享，再结束 fsgw 进程（托盘图标同时消失）">退出程序</button>
+    </div>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <!-- 总开关 -->
+  <section class="card">
+    <div class="switchbar">
+      <div>
+        <h2>总开关 <span class="hint">关闭即零暴露：无监听、无防火墙规则</span></h2>
+        <div class="seg" id="seg">
+          <button data-s="OFF">OFF</button>
+          <button data-s="LAN">局域网</button>
+          <button data-s="WAN">仅外部</button>
+          <button data-s="ALL">全部</button>
+        </div>
+        <div class="state-line" id="stateLine">—</div>
+        <div class="confirm-strip" id="confirmStrip">
+          <span class="grow" id="confirmText"></span>
+          <button class="btn mini" id="confirmCancel">取消</button>
+          <button class="btn primary mini" id="confirmOk">确认开启</button>
+        </div>
+      </div>
+      <div class="right">
+        <button class="btn danger" id="btnAllOff">一键全关</button>
+        <div class="tiny">立即停止全部对外服务</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 服务面 -->
+  <section class="card">
+    <h2>服务面 <span class="hint">连接串可直接发给手机</span></h2>
+    <div class="grid3" id="svcGrid"></div>
+  </section>
+
+  <!-- SMB 客户端 -->
+  <section class="card">
+    <h2>SMB 客户端 <span class="hint">登记谁可以进；不登记的名字会被明确拒绝，Windows 那侧会正常弹凭据框</span></h2>
+    <div class="cred-row">
+      <label class="field">客户名
+        <input id="smbName" type="text" spellcheck="false" autocomplete="off" placeholder="如 example-user">
+      </label>
+      <label class="field">口令
+        <input id="smbPass" type="text" spellcheck="false" autocomplete="off" placeholder="该客户端的口令">
+      </label>
+      <label class="field">备注
+        <input id="smbNote" type="text" spellcheck="false" autocomplete="off" placeholder="哪台设备">
+      </label>
+      <button class="btn primary mini" id="btnAddSMB">添加 / 更新</button>
+    </div>
+    <div class="tiny" id="smbLine">—</div>
+    <table>
+      <thead><tr><th>客户名</th><th>备注</th><th>添加时间</th><th>来源</th><th></th></tr></thead>
+      <tbody id="smbAcctRows"></tbody>
+    </table>
+    <div class="spark-label">在线连接</div>
+    <table>
+      <thead><tr><th>来源</th><th>接入端</th><th>账号</th><th>已连</th><th>共享</th></tr></thead>
+      <tbody id="smbSessRows"></tbody>
+    </table>
+    <div class="spark-label">最近登录尝试 <span class="tiny">点一下把客户名填进上面的输入框</span></div>
+    <div class="chips" id="smbTryList"></div>
+  </section>
+
+  <!-- 快同步 -->
+  <section class="card">
+    <h2>快同步 <span class="hint">用 fsgw-sync 从别的机器推目录过来：分块并行、小文件打包、断点续传</span></h2>
+    <div class="tiny" id="syncLine">—</div>
+    <div class="sync-cmd">
+      <code id="syncCmd">—</code>
+      <button class="btn mini" id="btnCopySync">复制命令</button>
+    </div>
+    <div class="tiny">
+      客户端与服务端是同一份代码；换机器只需复制这条命令。
+      中断后原样重跑即续传，只补缺的块。令牌换法：删除服务端 data 目录下的 sync.token 后重启。
+    </div>
+  </section>
+
+  <!-- 共享目录 -->
+  <section class="card">
+    <h2>共享目录 <span class="hint">只有白名单目录会被索引与暴露；换目录会重建索引</span></h2>
+    <table>
+      <thead><tr><th>路径</th><th>权限</th><th>属性</th><th>操作</th></tr></thead>
+      <tbody id="shareRows"></tbody>
+    </table>
+    <div class="row-gap">
+      <button class="btn" id="btnBrowse">浏览目录</button>
+      <span class="tiny">「更换目录」会当场改写配置并重建索引；共享地址（\\主机\share）不变，内容换成新目录。</span>
+    </div>
+  </section>
+
+  <!-- 外部访问口令 -->
+  <section class="card">
+    <h2>外部访问口令 <span class="hint">WebDAV 只读面用它认证，保存后立即生效</span></h2>
+    <div class="cred-row">
+      <label class="field">用户名
+        <input id="wdUser" type="text" spellcheck="false" autocomplete="off">
+      </label>
+      <label class="field">新口令
+        <input id="wdPass" type="text" spellcheck="false" autocomplete="off" placeholder="至少 6 位">
+      </label>
+      <button class="btn mini" id="btnGenPass">随机生成</button>
+      <button class="btn primary mini" id="btnSaveCred">保存</button>
+    </div>
+    <div class="tiny" id="credLine">—</div>
+  </section>
+
+  <!-- 索引 -->
+  <section class="card">
+    <h2>索引 <span class="hint">数据库是唯一真相源，磁盘只提供字节</span></h2>
+    <div class="kpis">
+      <div class="kpi"><div class="k">已索引文件</div><div class="v" id="kFiles">—</div></div>
+      <div class="kpi"><div class="k">目录</div><div class="v" id="kDirs">—</div></div>
+      <div class="kpi"><div class="k">索引版本</div><div class="v" id="kVers">—</div></div>
+      <div class="kpi"><div class="k">路径历史</div><div class="v" id="kHist">—</div></div>
+      <div class="kpi"><div class="k">事件总数</div><div class="v" id="kEvents">—</div></div>
+      <div class="kpi"><div class="k">写队列</div><div class="v" id="kQueue">—</div></div>
+    </div>
+    <div class="spark-label">索引事件速率（本次会话）</div>
+    <svg class="spark" id="spark" viewBox="0 0 300 46" preserveAspectRatio="none"></svg>
+    <div class="tiny" id="reconcileLine"></div>
+  </section>
+
+  <!-- 诊断 -->
+  <section class="card">
+    <h2>诊断 <span class="hint">把“连不上但不是 bug”的问题前置暴露</span></h2>
+    <div class="diag" id="diagList"></div>
+  </section>
+
+  <!-- 审计 -->
+  <section class="card">
+    <h2>审计日志 <span class="hint">写操作与拒绝操作都会留痕</span></h2>
+    <div class="chips" id="chips">
+      <button class="chip on" data-f="all">全部</button>
+      <button class="chip" data-f="deny">拒绝</button>
+      <button class="chip" data-f="ok">成功</button>
+    </div>
+    <div class="audit-scroll">
+      <table>
+        <thead><tr><th style="width:76px">时间</th><th style="width:88px">来源</th><th>动作</th><th>结果</th><th>详情</th></tr></thead>
+        <tbody id="auditRows"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer class="foot">
+    令牌只放在请求头 X-FSGW-Token 里，不进 URL、不进服务端访问日志 · 右上角「令牌」可更换或清除本机记住的令牌
+  </footer>
+</div>
+
+<!-- 目录浏览 -->
+<div class="modal" id="modal" hidden>
+  <div class="modal-box" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span class="m-ico" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+        </span>
+        <b id="modalTitle">选择目录</b>
+      </div>
+      <button class="btn mini ghost" id="modalClose">关闭</button>
+    </div>
+
+    <div class="modal-nav" id="modalDrives"></div>
+
+    <div class="modal-pathbar">
+      <input id="modalPathInput" class="modal-pathinput" spellcheck="false" autocomplete="off"
+             placeholder="输入完整路径后回车，例如 D:\照片" />
+      <button class="btn mini" id="modalGo">前往</button>
+    </div>
+
+    <div class="modal-list" id="modalList"></div>
+
+    <div class="modal-foot">
+      <div class="modal-hint" id="modalHint">只列出子目录，不列出文件名与内容。</div>
+      <button class="btn primary" id="modalPick" hidden>共享这个目录</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- 改 DLNA 设备名 -->
+<div class="modal" id="nameModal" hidden>
+  <div class="modal-box narrow" role="dialog" aria-modal="true" aria-labelledby="nameModalTitle">
+    <div class="modal-head">
+      <div class="modal-title">
+        <span class="m-ico" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+        </span>
+        <b id="nameModalTitle">改设备名</b>
+      </div>
+      <button class="btn mini ghost" id="nameModalClose">关闭</button>
+    </div>
+
+    <div class="modal-form">
+      <label class="field">电视 / 手机上显示的名字
+        <input id="nameInput" type="text" maxlength="32" spellcheck="false" autocomplete="off"
+               placeholder="家庭共享" />
+      </label>
+      <div class="modal-hint">保存后会重新广播一次，电视里的名字几秒内跟着变。
+        同一局域网里有两台 fsgw 时，靠名字区分谁是谁。</div>
+    </div>
+
+    <div class="modal-foot">
+      <div class="modal-hint" id="nameHint"></div>
+      <button class="btn primary" id="nameSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 登录：用共享设置里的账号（WebDAV / SMB），不用去服务器上找 token -->
+<div class="gate" id="gate" hidden>
+  <form class="gate-box" id="gateForm" autocomplete="on">
+    <h2>登录控制台</h2>
+    <p class="gate-desc">用<strong>共享设置里的账号</strong>登录。</p>
+    <p class="gate-desc">就是连共享盘（SMB）或 WebDAV 时用的那个用户名和口令。</p>
+    <label class="field">用户名
+      <input id="gateUser" name="username" type="text" spellcheck="false"
+             autocomplete="username" placeholder="例如 admin" autofocus>
+    </label>
+    <label class="field">口令
+      <input id="gatePass" name="password" type="password"
+             autocomplete="current-password" placeholder="共享口令">
+    </label>
+    <label class="gate-remember">
+      <input type="checkbox" id="gateRemember" checked> 保持登录（7 天内免登录）
+    </label>
+    <div class="gate-actions">
+      <span class="grow tiny" id="gateMsg"></span>
+      <button class="btn primary" id="gateOk" type="submit">登录</button>
+    </div>
+    <details class="gate-adv">
+      <summary>用访问令牌登录（脚本 / 自动化）</summary>
+      <p class="gate-desc">
+        令牌是给命令行和脚本用的机器凭据，存在服务器上（Linux：
+        <code>sudo cat /var/lib/fsgw/control.token</code>）。
+      </p>
+      <label class="field">令牌
+        <input id="gateToken" type="text" spellcheck="false" autocomplete="off"
+               placeholder="48 位十六进制">
+      </label>
+      <div class="gate-actions">
+        <span class="grow"></span>
+        <button class="btn mini" type="button" id="gateTokenOk">用令牌登录</button>
+      </div>
+    </details>
+  </form>
+</div>
+
+<script src="/app.js"></script>
+</body>
+</html>
